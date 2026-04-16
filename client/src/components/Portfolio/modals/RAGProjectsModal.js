@@ -1,8 +1,11 @@
 import React from 'react';
-import { getRAGColor } from '../utils';
+import { getRAGColor, isActiveStatus } from '../utils';
 
 const RAGProjectsModal = ({ isOpen, onClose, projects }) => {
   if (!isOpen) return null;
+
+  // Filter out completed/cancelled projects
+  const activeProjects = (projects || []).filter(p => isActiveStatus(p.status));
 
   return (
     <div className="modal-overlay" onClick={onClose} style={{ 
@@ -42,7 +45,7 @@ const RAGProjectsModal = ({ isOpen, onClose, projects }) => {
         </div>
         <div className="modal-body" style={{ padding: '20px' }}>
           {['Green', 'Amber', 'Red'].map(rag => {
-            const projectsWithRAG = projects.filter(p => 
+            const projectsWithRAG = activeProjects.filter(p => 
               p.ragStatus?.toLowerCase() === rag.toLowerCase()
             );
             return (

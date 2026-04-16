@@ -51,9 +51,13 @@ function PortfolioContent() {
     return { fresh, stale, missing };
   }, [portfolioData.updatedThisWeek, portfolioData.notUpdated, portfolioData.noData]);
 
+  // Only count critical items from active projects (exclude completed/cancelled)
   const allCriticalItems = useMemo(() => {
-    const projects = portfolioData.projects || [];
-    const risks = projects.flatMap(project => (project.openCriticalRisksDetails || []).map((item, index) => ({
+    const activeProjects = (portfolioData.projects || []).filter(p => {
+      const status = (p.status || '').toLowerCase();
+      return status !== 'completed' && status !== 'cancelled';
+    });
+    const risks = activeProjects.flatMap(project => (project.openCriticalRisksDetails || []).map((item, index) => ({
       id: `${project.id || project._id}-risk-${index}`,
       projectName: project.name,
       title: item.Title || item.Description || item['Risk Title'] || 'Risk',
@@ -62,7 +66,7 @@ function PortfolioContent() {
       type: 'Risk'
     })));
 
-    const issues = projects.flatMap(project => (project.openCriticalIssuesDetails || []).map((item, index) => ({
+    const issues = activeProjects.flatMap(project => (project.openCriticalIssuesDetails || []).map((item, index) => ({
       id: `${project.id || project._id}-issue-${index}`,
       projectName: project.name,
       title: item.Title || item.Description || item['Issue Title'] || 'Issue',
@@ -108,10 +112,10 @@ function PortfolioContent() {
     });
   }, [portfolioData.projects, projectSearchQuery]);
 
-  // Calculate percentage of projects updated within last 7 days
-  const totalProjects = portfolioData.projects?.length || 0;
+  // Calculate percentage of ACTIVE projects updated within last 7 days
+  const totalActiveProjects = activeProjectsFiltered.length;
   const freshProjects = portfolioData.updatedThisWeek?.length || 0;
-  const updatePercentage = totalProjects > 0 ? Math.round((freshProjects / totalProjects) * 100) : 0;
+  const updatePercentage = totalActiveProjects > 0 ? Math.round((freshProjects / totalActiveProjects) * 100) : 0;
   
   const criticalTotal = allCriticalItems.length;
   const summaryHighlights = [
@@ -139,7 +143,7 @@ function PortfolioContent() {
     {
       label: 'Update Status',
       value: `${updatePercentage}%`,
-      helper: `${freshProjects}/${totalProjects} projects up to date`,
+      helper: `${freshProjects}/${totalActiveProjects} active projects up to date`,
       tone: 'muted',
       type: 'stale'
     }

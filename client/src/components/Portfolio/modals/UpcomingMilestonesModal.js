@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { getRAGColor, getProjectOwner } from '../utils';
+import { getRAGColor, getProjectOwner, isActiveStatus } from '../utils';
 import MilestoneDetailModal from './MilestoneDetailModal';
 
 const UpcomingMilestonesModal = ({ isOpen, onClose, projects }) => {
@@ -7,7 +7,9 @@ const UpcomingMilestonesModal = ({ isOpen, onClose, projects }) => {
 
   if (!isOpen) return null;
 
-  const projectsWithUpcoming = projects.filter(p => (p.upcomingMilestones || 0) > 0);
+  // Filter out completed/cancelled projects
+  const activeProjects = (projects || []).filter(p => isActiveStatus(p.status));
+  const projectsWithUpcoming = activeProjects.filter(p => (p.upcomingMilestones || 0) > 0);
 
   return (
     <div className="modal-overlay" onClick={onClose} style={{ 

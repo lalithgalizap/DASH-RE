@@ -29,9 +29,10 @@ const SummaryModal = ({
     }
   };
 
-  // Filter projects based on search for critical items
+  // Filter projects based on search for critical items (exclude completed/cancelled)
   const getCriticalProjects = () => {
-    const criticalItems = projects.flatMap(project => {
+    const activeProjects = projects.filter(p => isActiveStatus(p.status));
+    const criticalItems = activeProjects.flatMap(project => {
       const risks = (project.openCriticalRisksDetails || []).map((item, index) => ({
         id: `${project.id || project._id}-risk-${index}`,
         title: item.Title || item.Description || 'Risk',
@@ -207,24 +208,28 @@ const SummaryModal = ({
                 <ul className="rag-summary-list">
                   {getActiveProjects().map(project => (
                     <li key={`active-${project.id || project._id}`} className="rag-summary-project-item">
-                      <button
-                        type="button"
-                        className="rag-summary-project-header"
-                        onClick={() => toggleExpand(`active-${project.id || project._id}`)}
-                      >
+                      <div className="rag-summary-project-header" style={{ cursor: 'default' }}>
                         <div className="rag-summary-project-name">{project.name}</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: getRAGColor(project.ragStatus) }} />
-                          <span className={`rag-summary-chevron ${expandedId === `active-${project.id || project._id}` ? 'open' : ''}`}>⌄</span>
-                        </div>
-                      </button>
-                      {expandedId === `active-${project.id || project._id}` && (
-                        <div className="rag-summary-project-metrics">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '20px', fontSize: '13px', color: '#6b7280' }}>
                           <span>{getProjectOwner(project)}</span>
                           <span>{project.clients || '—'}</span>
-                          <span>{project.status || '—'}</span>
+                          <span style={{ 
+                            padding: '2px 8px', 
+                            borderRadius: '4px', 
+                            fontSize: '12px', 
+                            fontWeight: 500,
+                            background: project.status === 'On Track' ? '#d1fae5' : 
+                                        project.status === 'On Hold' ? '#fef3c7' : 
+                                        project.status === 'Delayed' ? '#fee2e2' : '#f3f4f6',
+                            color: project.status === 'On Track' ? '#059669' : 
+                                   project.status === 'On Hold' ? '#d97706' : 
+                                   project.status === 'Delayed' ? '#dc2626' : '#6b7280'
+                          }}>
+                            {project.status || '—'}
+                          </span>
+                          <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: getRAGColor(project.ragStatus) }} />
                         </div>
-                      )}
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -238,10 +243,11 @@ const SummaryModal = ({
           {type === 'critical' && (
             <div className="critical-accordion">
               {(() => {
-                // Get projects that have critical items
+                // Get active projects that have critical items (exclude completed/cancelled)
                 const projectsWithCritical = projects.filter(project => 
-                  (project.openCriticalRisksDetails?.length || 0) > 0 || 
-                  (project.openCriticalIssuesDetails?.length || 0) > 0
+                  isActiveStatus(project.status) &&
+                  ((project.openCriticalRisksDetails?.length || 0) > 0 || 
+                   (project.openCriticalIssuesDetails?.length || 0) > 0)
                 );
                 
                 const filteredProjects = searchQuery.trim() 
@@ -306,7 +312,7 @@ const SummaryModal = ({
                       </tr>
                     </thead>
                     <tbody>
-                      {(projects || []).map(project => (
+                      {(projects || []).filter(p => isActiveStatus(p.status)).map(project => (
                         <tr key={`all-${project.id || project._id}`} style={{ borderBottom: '1px solid #e5e7eb' }}>
                           <td style={{ padding: '10px', color: '#111827' }}>{project.name}</td>
                           <td style={{ padding: '10px', color: '#6b7280' }}>{getProjectOwner(project)}</td>
@@ -327,7 +333,8 @@ const SummaryModal = ({
                   Missing Updates (7+ days)
                 </h4>
                 {(() => {
-                  const stale = (projects || []).filter(p => p.lastModified && !p.hasData === false);
+                  const activeProjects = (projects || []).filter(p => isActiveStatus(p.status));
+                  const stale = activeProjects.filter(p => p.lastModified && !p.hasData === false);
                   const sevenDaysAgo = new Date();
                   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
                   const missingUpdates = stale.filter(p => new Date(p.lastModified) < sevenDaysAgo);
@@ -359,7 +366,8 @@ const SummaryModal = ({
                   No Data
                 </h4>
                 {(() => {
-                  const noData = (projects || []).filter(p => !p.hasData || !p.lastModified);
+                  const activeProjects = (projects || []).filter(p => isActiveStatus(p.status));
+                  const noData = activeProjects.filter(p => !p.hasData || !p.lastModified);
                   
                   return noData.length > 0 ? (
                     <div style={{ maxHeight: '150px', overflow: 'auto', border: '1px solid #fecaca', borderRadius: '8px', background: '#fef2f2' }}>

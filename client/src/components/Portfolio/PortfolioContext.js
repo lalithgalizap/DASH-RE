@@ -168,6 +168,9 @@ export const PortfolioProvider = ({ children }) => {
       });
       
       projectsWithLastModified.forEach(project => {
+        // Skip completed/cancelled projects for update status tracking
+        if (!isActiveStatus(project.status)) return;
+        
         if (!project.hasData || !project.lastModified) {
           noData.push(project);
         } else if (new Date(project.lastModified) >= sevenDaysAgo) {
@@ -188,12 +191,12 @@ export const PortfolioProvider = ({ children }) => {
         red: activeEligibleProjects.filter(p => p.ragStatus?.toLowerCase() === 'red').length
       };
       
-      // Calculate totals
-      const overdueMilestonesTotal = projectsWithRAG.reduce((sum, p) => sum + (p.overdueMilestones || 0), 0);
-      const projectsWithOverdueMilestones = projectsWithRAG.filter(p => (p.overdueMilestones || 0) > 0).length;
-      const upcomingMilestonesTotal = projectsWithRAG.reduce((sum, p) => sum + (p.upcomingMilestones || 0), 0);
-      const openCriticalRisksTotal = projectsWithRAG.reduce((sum, p) => sum + (p.openCriticalRisks || 0), 0);
-      const openCriticalIssuesTotal = projectsWithRAG.reduce((sum, p) => sum + (p.openCriticalIssues || 0), 0);
+      // Calculate totals (excluding completed/cancelled projects)
+      const overdueMilestonesTotal = activeEligibleProjects.reduce((sum, p) => sum + (p.overdueMilestones || 0), 0);
+      const projectsWithOverdueMilestones = activeEligibleProjects.filter(p => (p.overdueMilestones || 0) > 0).length;
+      const upcomingMilestonesTotal = activeEligibleProjects.reduce((sum, p) => sum + (p.upcomingMilestones || 0), 0);
+      const openCriticalRisksTotal = activeEligibleProjects.reduce((sum, p) => sum + (p.openCriticalRisks || 0), 0);
+      const openCriticalIssuesTotal = activeEligibleProjects.reduce((sum, p) => sum + (p.openCriticalIssues || 0), 0);
       
       setPortfolioData({
         projects: projectsWithLastModified,

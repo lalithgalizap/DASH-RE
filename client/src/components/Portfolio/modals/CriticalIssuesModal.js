@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { getRAGColor, getProjectOwner } from '../utils';
+import { getRAGColor, getProjectOwner, isActiveStatus } from '../utils';
 import IssueDetailModal from './IssueDetailModal';
 
 const CriticalIssuesModal = ({ isOpen, onClose, projects }) => {
@@ -7,7 +7,9 @@ const CriticalIssuesModal = ({ isOpen, onClose, projects }) => {
 
   if (!isOpen) return null;
 
-  const projectsWithIssues = projects.filter(p => (p.openCriticalIssues || 0) > 0);
+  // Filter out completed/cancelled projects
+  const activeProjects = (projects || []).filter(p => isActiveStatus(p.status));
+  const projectsWithIssues = activeProjects.filter(p => (p.openCriticalIssues || 0) > 0);
 
   return (
     <div className="modal-overlay" onClick={onClose} style={{ 
