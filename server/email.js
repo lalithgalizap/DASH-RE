@@ -42,4 +42,30 @@ async function sendWelcomeEmail(to, username, password) {
   }
 }
 
-module.exports = { sendWelcomeEmail };
+async function sendPasswordResetEmail(to, code) {
+  const mailOptions = {
+    from: process.env.SMTP_USER,
+    to: to,
+    subject: 'PMO Dashboard - Password Reset Code',
+    html: `
+      <h2>Password Reset Request</h2>
+      <p>You requested a password reset for your PMO Dashboard account.</p>
+      <p><strong>Your reset code is: ${code}</strong></p>
+      <p>Enter this code on the password reset page.</p>
+      <p><em>This code will expire in 15 minutes.</em></p>
+      <br>
+      <p style="color: #666; font-size: 12px;">If you didn't request this reset, please ignore this email.</p>
+    `
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log('Password reset email sent to:', to);
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to send password reset email:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+module.exports = { sendWelcomeEmail, sendPasswordResetEmail };

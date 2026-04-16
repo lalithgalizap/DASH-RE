@@ -89,6 +89,46 @@ export const AuthProvider = ({ children }) => {
            user?.role === 'Superuser' || user?.role_name === 'Superuser';
   };
 
+  // Forgot password methods
+  const sendResetCode = async (email) => {
+    try {
+      const response = await axios.post('/api/auth/forgot-password', { email });
+      return { success: true, message: response.data.message };
+    } catch (error) {
+      return { 
+        success: false, 
+        error: error.response?.data?.error || 'Failed to send reset code' 
+      };
+    }
+  };
+
+  const verifyResetCode = async (email, code) => {
+    try {
+      const response = await axios.post('/api/auth/verify-reset-code', { email, code });
+      return { success: true, resetToken: response.data.resetToken };
+    } catch (error) {
+      return { 
+        success: false, 
+        error: error.response?.data?.error || 'Invalid or expired code' 
+      };
+    }
+  };
+
+  const resetPassword = async (resetToken, newPassword) => {
+    try {
+      const response = await axios.post('/api/auth/reset-password', { 
+        resetToken, 
+        newPassword 
+      });
+      return { success: true, message: response.data.message };
+    } catch (error) {
+      return { 
+        success: false, 
+        error: error.response?.data?.error || 'Failed to reset password' 
+      };
+    }
+  };
+
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
@@ -102,7 +142,10 @@ export const AuthProvider = ({ children }) => {
     hasPermission,
     isAdmin,
     canAddClients,
-    checkAuth
+    checkAuth,
+    sendResetCode,
+    verifyResetCode,
+    resetPassword
   };
 
   return (

@@ -85,6 +85,18 @@ class DatabaseAdapter {
     };
   }
 
+  async getUserByEmail(email) {
+    const user = await models.User.findOne({ email: email.toLowerCase() }).populate('role_id').lean();
+    if (!user) return null;
+    return { 
+      ...user, 
+      id: user._id.toString(), 
+      role_id: user.role_id?._id.toString(),
+      role: user.role_id?.role_name,
+      role_name: user.role_id?.role_name
+    };
+  }
+
   async createUser(data) {
     const user = await models.User.create(data);
     return { id: user._id.toString() };
