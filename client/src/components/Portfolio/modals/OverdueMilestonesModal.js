@@ -1,18 +1,13 @@
 import React, { useState } from 'react';
-import { convertExcelDateToJS, getRAGColor } from '../utils';
+import { getRAGColor, getProjectOwner } from '../utils';
+import MilestoneDetailModal from './MilestoneDetailModal';
 
 const OverdueMilestonesModal = ({ isOpen, onClose, projects }) => {
-  const [expandedId, setExpandedId] = useState(null);
+  const [selectedProject, setSelectedProject] = useState(null);
 
   if (!isOpen) return null;
 
-  const toggleExpand = (id) => {
-    setExpandedId(expandedId === id ? null : id);
-  };
-
   const projectsWithOverdue = projects.filter(p => (p.overdueMilestones || 0) > 0);
-  const todayCalc = new Date();
-  todayCalc.setHours(0, 0, 0, 0);
 
   return (
     <div className="modal-overlay" onClick={onClose} style={{ 
@@ -30,7 +25,7 @@ const OverdueMilestonesModal = ({ isOpen, onClose, projects }) => {
       <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ 
         backgroundColor: 'white', 
         borderRadius: '8px', 
-        maxWidth: '1000px', 
+        maxWidth: '800px', 
         maxHeight: '80vh', 
         overflow: 'auto', 
         width: '90%' 
@@ -51,48 +46,51 @@ const OverdueMilestonesModal = ({ isOpen, onClose, projects }) => {
           }}>×</button>
         </div>
         <div className="modal-body" style={{ padding: '20px' }}>
-          <div className="rag-summary-modal">
+          <div className="critical-accordion">
             {projectsWithOverdue.length > 0 ? (
-              <ul className="rag-summary-list">
-                {projectsWithOverdue
-                  .sort((a, b) => (b.overdueMilestones || 0) - (a.overdueMilestones || 0))
-                  .map(project => (
-                    <li key={`overdue-${project.id}`} className="rag-summary-project-item">
-                      <button
-                        type="button"
-                        className="rag-summary-project-header"
-                        onClick={() => toggleExpand(`overdue-${project.id}`)}
-                      >
-                        <div className="rag-summary-project-name">{project.name}</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <span style={{ color: '#ef4444', fontWeight: '600', fontSize: '13px' }}>{project.overdueMilestones} overdue</span>
-                          <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: getRAGColor(project.ragStatus) }} />
-                          <span className={`rag-summary-chevron ${expandedId === `overdue-${project.id}` ? 'open' : ''}`}>⌄</span>
+              projectsWithOverdue
+                .sort((a, b) => (b.overdueMilestones || 0) - (a.overdueMilestones || 0))
+                .map(project => (
+                  <div key={`overdue-${project.id || project._id}`} className="critical-project">
+                    <button
+                      type="button"
+                      className="critical-project-header"
+                      onClick={() => setSelectedProject(project)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <div className="critical-project-info">
+                        <div className="critical-project-name">{project.name}</div>
+                        <div className="critical-meta">
+                          <span>{getProjectOwner(project)}</span>
+                          <span>•</span>
+                          <span>{project.overdueMilestones} overdue</span>
                         </div>
-                      </button>
-                      {expandedId === `overdue-${project.id}` && project.overdueMilestoneDetails?.length > 0 && (
-                        <div className="rag-summary-project-metrics" style={{ flexDirection: 'column', gap: '8px' }}>
-                          {project.overdueMilestoneDetails.map((milestone, idx) => {
-                            const endDate = convertExcelDateToJS(milestone['Planned End Date']);
-                            const daysOverdue = endDate ? Math.abs(Math.ceil((todayCalc - endDate) / (1000 * 60 * 60 * 24))) : 0;
-                            return (
-                              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f3f4f6' }}>
-                                <span>{milestone['Milestone / Task Name'] || 'Unnamed'}</span>
-                                <span style={{ color: '#ef4444' }}>{daysOverdue} days overdue</span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </li>
-                  ))}
-              </ul>
+                      </div>
+                      <div className="critical-project-right">
+                        <span style={{ color: '#ef4444', fontWeight: '600', fontSize: '13px', marginRight: '12px' }}>
+                          {project.overdueMilestones} overdue
+                        </span>
+                        <span className="critical-status-dot" style={{ backgroundColor: getRAGColor(project.ragStatus) }}></span>
+                        <span className="critical-chevron">⌄</span>
+                      </div>
+                    </button>
+                  </div>
+                ))
             ) : (
               <p className="rag-summary-empty">No projects with overdue milestones</p>
             )}
           </div>
         </div>
       </div>
+      
+      {/* Milestone Detail Modal */}
+      {selectedProject && (
+        <MilestoneDetailModal 
+          project={selectedProject} 
+          onClose={() => setSelectedProject(null)} 
+          type="overdue"
+        />
+      )}
     </div>
   );
 };

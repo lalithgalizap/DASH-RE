@@ -50,7 +50,7 @@ const ProjectsTable = ({
                 <td className="number-cell">{project.upcomingMilestones}</td>
                 <td className="number-cell">{project.openCriticalRisks}</td>
                 <td className="number-cell">{project.openCriticalIssues}</td>
-                <td className="date-cell">{formatDate(project.lastUpdated || project.updated_at)}</td>
+                <td className="date-cell">{formatDate(project.lastModified || project.updated_at)}</td>
               </tr>
               {expandedProject === project.id && (
                 <tr className="expanded-row">

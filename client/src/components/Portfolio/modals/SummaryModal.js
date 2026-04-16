@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { getRAGColor, getProjectOwner, isActiveStatus, formatDate } from '../utils';
+import CriticalItemsDetailModal from './CriticalItemsDetailModal';
 
 const SummaryModal = ({ 
   type, 
@@ -10,6 +11,7 @@ const SummaryModal = ({
 }) => {
   const [expandedId, setExpandedId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedProject, setSelectedProject] = useState(null);
 
   if (!type) return null;
 
@@ -22,7 +24,7 @@ const SummaryModal = ({
       case 'active': return 'Active Projects';
       case 'rag': return 'Projects by RAG';
       case 'critical': return 'Portfolio Critical Items';
-      case 'stale': return 'Stale or Missing Updates';
+      case 'stale': return 'Project Update Status';
       default: return '';
     }
   };
@@ -33,16 +35,22 @@ const SummaryModal = ({
       const risks = (project.openCriticalRisksDetails || []).map((item, index) => ({
         id: `${project.id || project._id}-risk-${index}`,
         title: item.Title || item.Description || 'Risk',
-        owner: item.Owner || 'Unassigned',
+        owner: item['RAID Owner'] || item.Owner || item['Owner'] || item['Risk Owner'] || 'Unassigned',
         severity: item.Severity || 'High',
-        type: 'Risk'
+        type: 'Risk',
+        dateRaised: item['Date Raised'],
+        status: item.Status,
+        raidId: item['RAID ID'] || item.ID
       }));
       const issues = (project.openCriticalIssuesDetails || []).map((item, index) => ({
         id: `${project.id || project._id}-issue-${index}`,
         title: item.Title || item.Description || item['Issue Title'] || 'Issue',
-        owner: item.Owner || 'Unassigned',
+        owner: item['RAID Owner'] || item.Owner || item['Owner'] || 'Unassigned',
         severity: item.Severity || 'High',
-        type: 'Issue'
+        type: 'Issue',
+        dateRaised: item['Date Raised'],
+        status: item.Status,
+        raidId: item['RAID ID'] || item.ID
       }));
       const items = [...risks, ...issues];
       if (!items.length) return [];
@@ -229,86 +237,162 @@ const SummaryModal = ({
           {/* Critical Items */}
           {type === 'critical' && (
             <div className="critical-accordion">
-              {getCriticalProjects().map(project => (
-                <div key={`critical-modal-project-${project.id}`} className="critical-project">
-                  <button
-                    type="button"
-                    className="critical-project-header"
-                    onClick={() => toggleExpand(project.id)}
-                  >
-                    <div className="critical-project-info">
-                      <div className="critical-project-name">{project.name}</div>
-                      <div className="critical-meta">
-                        <span>{project.owner}</span>
-                        <span>•</span>
-                        <span>{project.client}</span>
-                        <span>•</span>
-                        <span>{project.items.length} items</span>
-                      </div>
-                    </div>
-                    <div className="critical-project-right">
-                      <span className="critical-status-dot" style={{ backgroundColor: getRAGColor(project.ragStatus) }}></span>
-                      <span className={`critical-chevron ${expandedId === project.id ? 'open' : ''}`}>⌄</span>
-                    </div>
-                  </button>
-                  {expandedId === project.id && (
-                    <ul className="critical-list">
-                      {project.items.map(item => (
-                        <li key={item.id} className={`critical-item critical-${item.type.toLowerCase()}`}>
-                          <div className="critical-type">{item.type}</div>
-                          <div className="critical-title">{item.title}</div>
-                          <div className="critical-meta">
-                            <span>{item.owner}</span>
-                            <span>•</span>
-                            <span>{item.severity}</span>
+              {(() => {
+                // Get projects that have critical items
+                const projectsWithCritical = projects.filter(project => 
+                  (project.openCriticalRisksDetails?.length || 0) > 0 || 
+                  (project.openCriticalIssuesDetails?.length || 0) > 0
+                );
+                
+                const filteredProjects = searchQuery.trim() 
+                  ? projectsWithCritical.filter(project => 
+                      project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      getProjectOwner(project).toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      (project.clients || '').toLowerCase().includes(searchQuery.toLowerCase())
+                    )
+                  : projectsWithCritical;
+                
+                return filteredProjects.length > 0 ? (
+                  filteredProjects.map(project => {
+                    const itemCount = (project.openCriticalRisksDetails?.length || 0) + 
+                                      (project.openCriticalIssuesDetails?.length || 0);
+                    return (
+                      <div key={`critical-project-${project.id || project._id}`} className="critical-project">
+                        <button
+                          type="button"
+                          className="critical-project-header"
+                          onClick={() => setSelectedProject(project)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <div className="critical-project-info">
+                            <div className="critical-project-name">{project.name}</div>
+                            <div className="critical-meta">
+                              <span>{getProjectOwner(project)}</span>
+                              <span>•</span>
+                              <span>{project.clients || '—'}</span>
+                              <span>•</span>
+                              <span>{itemCount} items</span>
+                            </div>
                           </div>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              ))}
-              {getCriticalProjects().length === 0 && (
-                <p className="rag-summary-empty">No critical items found</p>
-              )}
+                          <div className="critical-project-right">
+                            <span className="critical-status-dot" style={{ backgroundColor: getRAGColor(project.ragStatus) }}></span>
+                            <span className="critical-chevron">⌄</span>
+                          </div>
+                        </button>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="rag-summary-empty">No critical items found</p>
+                );
+              })()}
             </div>
           )}
 
           {/* Stale Projects */}
           {type === 'stale' && (
-            <div className="rag-summary-modal">
-              {(staleProjectsList || []).length > 0 ? (
-                <ul className="rag-summary-list">
-                  {(staleProjectsList || []).map(project => (
-                    <li key={`stale-${project.id || project._id}`} className="rag-summary-project-item">
-                      <button
-                        type="button"
-                        className="rag-summary-project-header"
-                        onClick={() => toggleExpand(`stale-${project.id || project._id}`)}
-                      >
-                        <div className="rag-summary-project-name">{project.name}</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: getRAGColor(project.ragStatus) }} />
-                          <span className={`rag-summary-chevron ${expandedId === `stale-${project.id || project._id}` ? 'open' : ''}`}>⌄</span>
-                        </div>
-                      </button>
-                      {expandedId === `stale-${project.id || project._id}` && (
-                        <div className="rag-summary-project-metrics">
-                          <span>{project.status || '—'}</span>
-                          <span>{project.lastModified ? formatDate(project.lastModified) : 'No data'}</span>
-                          <span>{project.clients || '—'}</span>
-                        </div>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="rag-summary-empty">No stale or missing updates</p>
-              )}
+            <div className="stale-content" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              {/* All Projects with Last Update */}
+              <section>
+                <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: '#374151' }}>All Projects</h4>
+                <div style={{ maxHeight: '200px', overflow: 'auto', border: '1px solid #e5e7eb', borderRadius: '8px' }}>
+                  <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse' }}>
+                    <thead style={{ background: '#f9fafb', position: 'sticky', top: 0 }}>
+                      <tr>
+                        <th style={{ padding: '10px', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Project</th>
+                        <th style={{ padding: '10px', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Owner</th>
+                        <th style={{ padding: '10px', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Status</th>
+                        <th style={{ padding: '10px', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Last Updated</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(projects || []).map(project => (
+                        <tr key={`all-${project.id || project._id}`} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                          <td style={{ padding: '10px', color: '#111827' }}>{project.name}</td>
+                          <td style={{ padding: '10px', color: '#6b7280' }}>{getProjectOwner(project)}</td>
+                          <td style={{ padding: '10px', color: '#6b7280' }}>{project.status || '—'}</td>
+                          <td style={{ padding: '10px', color: project.lastModified ? '#059669' : '#dc2626', fontWeight: 500 }}>
+                            {project.lastModified ? formatDate(project.lastModified) : 'No data'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              {/* Missing Updates (7+ days) */}
+              <section>
+                <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: '#b45309' }}>
+                  Missing Updates (7+ days)
+                </h4>
+                {(() => {
+                  const stale = (projects || []).filter(p => p.lastModified && !p.hasData === false);
+                  const sevenDaysAgo = new Date();
+                  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+                  const missingUpdates = stale.filter(p => new Date(p.lastModified) < sevenDaysAgo);
+                  
+                  return missingUpdates.length > 0 ? (
+                    <div style={{ maxHeight: '150px', overflow: 'auto', border: '1px solid #fed7aa', borderRadius: '8px', background: '#fffbeb' }}>
+                      <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse' }}>
+                        <tbody>
+                          {missingUpdates.map(project => (
+                            <tr key={`stale-${project.id || project._id}`} style={{ borderBottom: '1px solid #fed7aa' }}>
+                              <td style={{ padding: '10px', color: '#92400e', fontWeight: 500 }}>{project.name}</td>
+                              <td style={{ padding: '10px', color: '#b45309' }}>{formatDate(project.lastModified)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p style={{ fontSize: '13px', color: '#6b7280', padding: '12px', background: '#f9fafb', borderRadius: '8px' }}>
+                      All projects updated within the last 7 days
+                    </p>
+                  );
+                })()}
+              </section>
+
+              {/* No Data */}
+              <section>
+                <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: '#dc2626' }}>
+                  No Data
+                </h4>
+                {(() => {
+                  const noData = (projects || []).filter(p => !p.hasData || !p.lastModified);
+                  
+                  return noData.length > 0 ? (
+                    <div style={{ maxHeight: '150px', overflow: 'auto', border: '1px solid #fecaca', borderRadius: '8px', background: '#fef2f2' }}>
+                      <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse' }}>
+                        <tbody>
+                          {noData.map(project => (
+                            <tr key={`nodata-${project.id || project._id}`} style={{ borderBottom: '1px solid #fecaca' }}>
+                              <td style={{ padding: '10px', color: '#dc2626', fontWeight: 500 }}>{project.name}</td>
+                              <td style={{ padding: '10px', color: '#991b1b' }}>{getProjectOwner(project)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p style={{ fontSize: '13px', color: '#6b7280', padding: '12px', background: '#f9fafb', borderRadius: '8px' }}>
+                      All projects have data files
+                    </p>
+                  );
+                })()}
+              </section>
             </div>
           )}
         </div>
       </div>
+      
+      {/* Critical Items Detail Modal */}
+      {selectedProject && (
+        <CriticalItemsDetailModal 
+          project={selectedProject} 
+          onClose={() => setSelectedProject(null)} 
+        />
+      )}
     </div>
   );
 };

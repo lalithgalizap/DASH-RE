@@ -139,30 +139,26 @@ export const calculateProjectMetrics = (documents) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   
-  // Overdue milestones
-  const overdueMilestoneDetails = milestones.filter(m => {
-    if (!m['Planned End Date']) return false;
-    const endDate = convertExcelDateToJS(m['Planned End Date']);
-    if (!endDate) return false;
-    endDate.setHours(0, 0, 0, 0);
-    const isCompleted = m.Status && (m.Status.toLowerCase() === 'completed' || m.Status.toLowerCase() === 'complete');
-    return endDate < today && !isCompleted;
-  });
-  
-  // Upcoming milestones
   const fourteenDaysFromNow = new Date(today.getTime() + 14 * 24 * 60 * 60 * 1000);
-  const upcomingMilestoneDetails = milestones.filter(m => {
-    if (!m['Planned End Date']) return false;
+
+  const overdueMilestoneDetails = [];
+  const upcomingMilestoneDetails = [];
+  const allMilestoneDetails = [];
+
+  milestones.forEach(m => {
+    if (!m['Planned End Date']) return;
     const endDate = convertExcelDateToJS(m['Planned End Date']);
-    if (!endDate) return false;
+    if (!endDate) return;
     endDate.setHours(0, 0, 0, 0);
+
     const isCompleted = m.Status && (m.Status.toLowerCase() === 'completed' || m.Status.toLowerCase() === 'complete');
-    return endDate >= today && endDate <= fourteenDaysFromNow && !isCompleted;
-  });
-  
-  // All milestones with dates
-  const allMilestoneDetails = milestones.filter(m => {
-    return m['Planned End Date'] && convertExcelDateToJS(m['Planned End Date']) !== null;
+    allMilestoneDetails.push(m);
+
+    if (!isCompleted && endDate < today) {
+      overdueMilestoneDetails.push(m);
+    } else if (!isCompleted && endDate >= today && endDate <= fourteenDaysFromNow) {
+      upcomingMilestoneDetails.push(m);
+    }
   });
   
   // Overdue tasks

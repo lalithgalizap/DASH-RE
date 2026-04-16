@@ -5,7 +5,6 @@ import {
   usePortfolio,
   PortfolioHeader,
   ProjectsTable,
-  UpdatePulse,
   RAGBoardWithSearch,
   RAGProjectsModal,
   UpdatedProjectsModal,
@@ -19,7 +18,7 @@ import {
 import './Portfolio.css';
 
 function PortfolioContent() {
-  const { portfolioData, loading, fetchPortfolioData } = usePortfolio();
+  const { portfolioData, loading, error, fetchPortfolioData } = usePortfolio();
   const [showRAGProjectsModal, setShowRAGProjectsModal] = useState(false);
   const [showUpdatedProjectsModal, setShowUpdatedProjectsModal] = useState(false);
   const [showOverdueMilestonesModal, setShowOverdueMilestonesModal] = useState(false);
@@ -56,7 +55,7 @@ function PortfolioContent() {
       id: `${project.id || project._id}-risk-${index}`,
       projectName: project.name,
       title: item.Title || item.Description || item['Risk Title'] || 'Risk',
-      owner: item.Owner || item['Owner'] || 'Unassigned',
+      owner: item['RAID Owner'] || item.Owner || item['Owner'] || item['Risk Owner'] || 'Unassigned',
       severity: item.Severity || 'High',
       type: 'Risk'
     })));
@@ -65,7 +64,7 @@ function PortfolioContent() {
       id: `${project.id || project._id}-issue-${index}`,
       projectName: project.name,
       title: item.Title || item.Description || item['Issue Title'] || 'Issue',
-      owner: item.Owner || item['Owner'] || 'Unassigned',
+      owner: item['RAID Owner'] || item.Owner || item['Owner'] || 'Unassigned',
       severity: item.Severity || 'High',
       type: 'Issue'
     })));
@@ -94,7 +93,11 @@ function PortfolioContent() {
 
   const staleProjectsList = useMemo(() => ([...freshnessLists.stale, ...freshnessLists.missing]), [freshnessLists]);
 
-  const staleProjects = staleProjectsList.length;
+  // Calculate percentage of projects updated within last 7 days
+  const totalProjects = portfolioData.projects?.length || 0;
+  const freshProjects = portfolioData.updatedThisWeek?.length || 0;
+  const updatePercentage = totalProjects > 0 ? Math.round((freshProjects / totalProjects) * 100) : 0;
+  
   const criticalTotal = allCriticalItems.length;
   const summaryHighlights = [
     {
@@ -119,9 +122,9 @@ function PortfolioContent() {
       type: 'critical'
     },
     {
-      label: 'Stale / Missing Updates',
-      value: staleProjects,
-      helper: 'Older than 7 days',
+      label: 'Update Status',
+      value: `${updatePercentage}%`,
+      helper: `${freshProjects}/${totalProjects} projects up to date`,
       tone: 'muted',
       type: 'stale'
     }
@@ -133,6 +136,57 @@ function PortfolioContent() {
         <div className="loading-container">
           <div className="loading-spinner"></div>
           <p>Loading portfolio data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="portfolio-page">
+        <div className="error-container" style={{ 
+          textAlign: 'center', 
+          padding: '40px 20px',
+          maxWidth: '600px',
+          margin: '0 auto'
+        }}>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
+          <h2 style={{ color: '#dc2626', marginBottom: '12px' }}>Failed to Load Portfolio Data</h2>
+          <p style={{ color: '#6b7280', marginBottom: '24px' }}>
+            {error?.message || 'An unexpected error occurred while fetching project data.'}
+          </p>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+            <button 
+              onClick={fetchPortfolioData}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#2563eb',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 500
+              }}
+            >
+              Retry
+            </button>
+            <button 
+              onClick={() => window.location.reload()}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#f3f4f6',
+                color: '#374151',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 500
+              }}
+            >
+              Refresh Page
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -180,7 +234,7 @@ function PortfolioContent() {
         </div>
 
         <div className="portfolio-main-right">
-          <UpdatePulse freshnessLists={freshnessLists} />
+          {/* Placeholder for future widgets */}
         </div>
       </div>
 

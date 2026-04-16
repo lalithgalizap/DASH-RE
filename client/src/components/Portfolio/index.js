@@ -5,7 +5,6 @@ export { default as RAGBoard } from './RAGBoard';
 export { default as RAGProjectCard } from './RAGProjectCard';
 export { default as ProjectsTable } from './ProjectsTable';
 export { default as RAGBoardWithSearch } from './RAGBoardWithSearch';
-export { default as UpdatePulse } from './UpdatePulse';
 export { default as RAGProjectsModal } from './modals/RAGProjectsModal';
 export { default as UpdatedProjectsModal } from './modals/UpdatedProjectsModal';
 export { default as OverdueMilestonesModal } from './modals/OverdueMilestonesModal';
@@ -13,5 +12,9 @@ export { default as UpcomingMilestonesModal } from './modals/UpcomingMilestonesM
 export { default as CriticalRisksModal } from './modals/CriticalRisksModal';
 export { default as CriticalIssuesModal } from './modals/CriticalIssuesModal';
 export { default as SummaryModal } from './modals/SummaryModal';
+export { default as CriticalItemsDetailModal } from './modals/CriticalItemsDetailModal';
+export { default as MilestoneDetailModal } from './modals/MilestoneDetailModal';
+export { default as RiskDetailModal } from './modals/RiskDetailModal';
+export { default as IssueDetailModal } from './modals/IssueDetailModal';
 export { default as RAGCategoryModal } from './modals/RAGCategoryModal';
 export * from './utils';

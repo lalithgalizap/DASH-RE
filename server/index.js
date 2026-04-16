@@ -4,6 +4,7 @@ const bodyParser = require('body-parser');
 const fs = require('fs');
 const path = require('path');
 const dbAdapter = require('./dbAdapter');
+const { authenticate } = require('./auth');
 
 // Import route modules
 const projectsRoutes = require('./routes/projects');
@@ -35,6 +36,42 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/roles', rolesRoutes);
 app.use('/api/metrics', metricsRoutes);
+
+// Direct route for projects-file-status (also available at /api/metrics/projects-file-status)
+app.get('/api/projects-file-status', authenticate, async (req, res) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const dbAdapter = require('./dbAdapter');
+    const projects = await dbAdapter.getAllProjects({});
+    
+    const documentsDir = path.join(__dirname, '..', 'project-documents');
+    
+    const projectFiles = projects.map(project => {
+      const filePath = path.join(documentsDir, `${project.name}.xlsx`);
+      if (fs.existsSync(filePath)) {
+        const stats = fs.statSync(filePath);
+        return {
+          projectId: project._id || project.id,
+          projectName: project.name,
+          lastModified: stats.mtime,
+          hasData: true
+        };
+      } else {
+        return {
+          projectId: project._id || project.id,
+          projectName: project.name,
+          lastModified: null,
+          hasData: false
+        };
+      }
+    });
+    res.json({ projects: projectFiles });
+  } catch (err) {
+    console.error('Error getting project file status:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // Serve static files from React build
 app.use(express.static(path.join(__dirname, '..', 'client', 'build')));

@@ -7,6 +7,43 @@ const { authenticate } = require('../auth');
 
 const router = express.Router();
 
+// In-memory cache for parsed Excel documents: filePath:mtime -> documents
+const documentCache = new Map();
+const CACHE_MAX_SIZE = 50; // Limit cache to prevent memory bloat
+
+function getCacheKey(filePath) {
+  try {
+    const stats = fs.statSync(filePath);
+    return `${filePath}:${stats.mtimeMs}`;
+  } catch {
+    return null;
+  }
+}
+
+function getCachedDocuments(filePath) {
+  const cacheKey = getCacheKey(filePath);
+  if (!cacheKey) return null;
+  
+  const cached = documentCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+  return null;
+}
+
+function setCachedDocuments(filePath, documents) {
+  const cacheKey = getCacheKey(filePath);
+  if (!cacheKey) return;
+  
+  // Simple LRU: if cache too big, clear oldest entries
+  if (documentCache.size >= CACHE_MAX_SIZE) {
+    const firstKey = documentCache.keys().next().value;
+    documentCache.delete(firstKey);
+  }
+  
+  documentCache.set(cacheKey, documents);
+}
+
 // Get project documents from Excel
 router.get('/projects/:id/documents', authenticate, async (req, res) => {
   try {
@@ -34,6 +71,12 @@ router.get('/projects/:id/documents', authenticate, async (req, res) => {
         governanceCadences: [],
         changeManagement: []
       });
+    }
+    
+    // Check cache before parsing Excel
+    const cached = getCachedDocuments(filePath);
+    if (cached) {
+      return res.json(cached);
     }
     
     const workbook = XLSX.readFile(filePath);
@@ -196,6 +239,9 @@ router.get('/projects/:id/documents', authenticate, async (req, res) => {
         return hasChangeId || hasAnyData;
       });
     }
+    
+    // Cache parsed documents for future requests
+    setCachedDocuments(filePath, documents);
     
     res.json(documents);
   } catch (err) {

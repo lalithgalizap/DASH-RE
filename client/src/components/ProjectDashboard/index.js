@@ -279,25 +279,46 @@ function ProjectDashboard({ projectId, projectName, project }) {
 
   return (
     <div className="project-dashboard">
-      <div className="dashboard-header">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
-          <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '600', color: '#111827' }}>{projectName}</h2>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '24px', fontSize: '13px', color: '#6b7280' }}>
+      <div className="dashboard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', paddingBottom: '20px', borderBottom: '1px solid #e5e7eb' }}>
+        {/* Left: Project Name and Meta */}
+        <div style={{ flex: 1 }}>
+          <h2 style={{ margin: '0 0 12px 0', fontSize: '28px', fontWeight: '700', color: '#111827', letterSpacing: '-0.02em' }}>
+            {projectName}
+          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px', fontSize: '13px', color: '#6b7280' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              Owner: <strong style={{ color: '#111827' }}>{project?.owner || documents?.projectCharter?.basicInfo?.projectManager || 'Not Assigned'}</strong>
+              <span style={{ fontWeight: 500 }}>Owner:</span>
+              <strong style={{ color: '#111827', fontWeight: 600 }}>
+                {project?.owner || documents?.projectCharter?.basicInfo?.projectManager || 'Not Assigned'}
+              </strong>
             </span>
+            <span style={{ color: '#d1d5db' }}>|</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              Last Updated: <strong style={{ color: '#111827' }}>{formatDate(lastRefresh)}</strong>
-            </span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: overallStatus.color, display: 'inline-block', boxShadow: '0 0 0 2px rgba(0,0,0,0.1)' }}></span>
-              <span>OVERALL STATUS: <strong style={{ color: overallStatus.color }}>{overallStatus.label}</strong></span>
+              <span style={{ fontWeight: 500 }}>Last Updated:</span>
+              <strong style={{ color: '#111827', fontWeight: 600 }}>{formatDate(lastRefresh)}</strong>
             </span>
           </div>
         </div>
+
+        {/* Right: Overall Status */}
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '8px'
+        }}>
+          <span style={{ 
+            width: '10px', 
+            height: '10px', 
+            borderRadius: '50%', 
+            backgroundColor: overallStatus.color
+          }}></span>
+          <span style={{ fontSize: '12px', fontWeight: 500, color: '#6b7280' }}>
+            Overall Status: <strong style={{ color: overallStatus.color, fontWeight: 600 }}>{overallStatus.label}</strong>
+          </span>
+        </div>
       </div>
 
-      <div className="metrics-grid">
+      <div className="dashboard-metrics-row">
         <div className="metric-card primary">
           <div className="metric-label">Project % Complete</div>
           <div className="metric-value-large">
@@ -315,7 +336,7 @@ function ProjectDashboard({ projectId, projectName, project }) {
               </span>
             )}
           </div>
-          <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '8px' }}>Click for performance details</div>
+          <div style={{ fontSize: '9px', color: '#9ca3af', marginTop: '4px' }}>Click for details</div>
         </div>
 
         <div className="metric-card clickable" onClick={() => setShowMilestoneCompletionModal(true)} style={{ cursor: 'pointer' }}>
@@ -328,7 +349,7 @@ function ProjectDashboard({ projectId, projectName, project }) {
               ? Math.round((metrics.milestoneCompletion.completed / metrics.milestoneCompletion.total) * 100) 
               : 0}%
           </div>
-          <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '8px' }}>Click for milestone details</div>
+          <div style={{ fontSize: '9px', color: '#9ca3af', marginTop: '4px' }}>Click for details</div>
         </div>
 
         <div className="metric-card clickable" onClick={() => setShowUpcomingMilestonesModal(true)} style={{ cursor: 'pointer' }}>
@@ -337,7 +358,7 @@ function ProjectDashboard({ projectId, projectName, project }) {
             {metrics.upcomingMilestones}
           </div>
           <div className="metric-sublabel">Milestones</div>
-          <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '8px' }}>Click for details</div>
+          <div style={{ fontSize: '9px', color: '#9ca3af', marginTop: '4px' }}>Click for details</div>
         </div>
 
         <div className="metric-card alert clickable" onClick={() => setShowOverdueMilestonesModal(true)} style={{ cursor: 'pointer' }}>
@@ -346,7 +367,7 @@ function ProjectDashboard({ projectId, projectName, project }) {
             {metrics.overdueMilestones}
           </div>
           <div className="metric-sublabel">{getTrendIcon(metrics.overdueMilestones)} Attention</div>
-          <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '8px' }}>Click for details</div>
+          <div style={{ fontSize: '9px', color: '#9ca3af', marginTop: '4px' }}>Click for details</div>
         </div>
 
         <div className="metric-card alert clickable" onClick={() => setShowOverdueTasksModal(true)} style={{ cursor: 'pointer' }}>
@@ -355,7 +376,7 @@ function ProjectDashboard({ projectId, projectName, project }) {
             {metrics.overdueTasks}
           </div>
           <div className="metric-sublabel">{getTrendIcon(metrics.overdueTasks)} Attention</div>
-          <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '8px' }}>Click for details</div>
+          <div style={{ fontSize: '9px', color: '#9ca3af', marginTop: '4px' }}>Click for details</div>
         </div>
       </div>
 

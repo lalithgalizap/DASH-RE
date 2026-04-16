@@ -1,14 +1,11 @@
 import React, { useState } from 'react';
-import { getRAGColor } from '../utils';
+import { getRAGColor, getProjectOwner } from '../utils';
+import IssueDetailModal from './IssueDetailModal';
 
 const CriticalIssuesModal = ({ isOpen, onClose, projects }) => {
-  const [expandedId, setExpandedId] = useState(null);
+  const [selectedProject, setSelectedProject] = useState(null);
 
   if (!isOpen) return null;
-
-  const toggleExpand = (id) => {
-    setExpandedId(expandedId === id ? null : id);
-  };
 
   const projectsWithIssues = projects.filter(p => (p.openCriticalIssues || 0) > 0);
 
@@ -28,7 +25,7 @@ const CriticalIssuesModal = ({ isOpen, onClose, projects }) => {
       <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ 
         backgroundColor: 'white', 
         borderRadius: '8px', 
-        maxWidth: '1000px', 
+        maxWidth: '800px', 
         maxHeight: '80vh', 
         overflow: 'auto', 
         width: '90%' 
@@ -49,71 +46,50 @@ const CriticalIssuesModal = ({ isOpen, onClose, projects }) => {
           }}>×</button>
         </div>
         <div className="modal-body" style={{ padding: '20px' }}>
-          <div className="rag-summary-modal">
+          <div className="critical-accordion">
             {projectsWithIssues.length > 0 ? (
-              <ul className="rag-summary-list">
-                {projectsWithIssues
-                  .sort((a, b) => (b.openCriticalIssues || 0) - (a.openCriticalIssues || 0))
-                  .map(project => (
-                    <li key={`issues-${project.id}`} className="rag-summary-project-item">
-                      <button
-                        type="button"
-                        className="rag-summary-project-header"
-                        onClick={() => toggleExpand(`issues-${project.id}`)}
-                      >
-                        <div className="rag-summary-project-name">{project.name}</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <span style={{ color: '#f59e0b', fontWeight: '600', fontSize: '13px' }}>{project.openCriticalIssues} issues</span>
-                          <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: getRAGColor(project.ragStatus) }} />
-                          <span className={`rag-summary-chevron ${expandedId === `issues-${project.id}` ? 'open' : ''}`}>⌄</span>
+              projectsWithIssues
+                .sort((a, b) => (b.openCriticalIssues || 0) - (a.openCriticalIssues || 0))
+                .map(project => (
+                  <div key={`issues-${project.id || project._id}`} className="critical-project">
+                    <button
+                      type="button"
+                      className="critical-project-header"
+                      onClick={() => setSelectedProject(project)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <div className="critical-project-info">
+                        <div className="critical-project-name">{project.name}</div>
+                        <div className="critical-meta">
+                          <span>{getProjectOwner(project)}</span>
+                          <span>•</span>
+                          <span>{project.openCriticalIssues} issues</span>
                         </div>
-                      </button>
-                      {expandedId === `issues-${project.id}` && project.openCriticalIssuesDetails?.length > 0 && (
-                        <div className="rag-summary-project-metrics" style={{ flexDirection: 'column', gap: '8px' }}>
-                          {project.openCriticalIssuesDetails.map((issue, idx) => (
-                            <div key={idx} style={{ 
-                              display: 'flex', 
-                              flexDirection: 'column',
-                              padding: '12px', 
-                              background: '#fffbeb',
-                              borderRadius: '6px',
-                              border: '1px solid #fcd34d',
-                              marginBottom: '8px'
-                            }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                <span style={{ fontWeight: 600, color: '#92400e' }}>{issue.Title || issue.Description || 'Unnamed Issue'}</span>
-                                <span style={{ 
-                                  padding: '2px 8px', 
-                                  borderRadius: '4px', 
-                                  fontSize: '11px', 
-                                  fontWeight: 500,
-                                  background: issue.Severity?.toLowerCase() === 'critical' ? '#fee2e2' : '#fef3c7',
-                                  color: issue.Severity?.toLowerCase() === 'critical' ? '#dc2626' : '#d97706'
-                                }}>
-                                  {issue.Severity || 'High'}
-                                </span>
-                              </div>
-                              <span style={{ fontSize: '12px', color: '#b45309' }}>
-                                Owner: {issue.Owner || 'Unassigned'}
-                              </span>
-                              {issue.Description && (
-                                <span style={{ fontSize: '12px', color: '#a16207', marginTop: '4px' }}>
-                                  {issue.Description}
-                                </span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </li>
-                  ))}
-              </ul>
+                      </div>
+                      <div className="critical-project-right">
+                        <span style={{ color: '#f59e0b', fontWeight: '600', fontSize: '13px', marginRight: '12px' }}>
+                          {project.openCriticalIssues} issues
+                        </span>
+                        <span className="critical-status-dot" style={{ backgroundColor: getRAGColor(project.ragStatus) }}></span>
+                        <span className="critical-chevron">⌄</span>
+                      </div>
+                    </button>
+                  </div>
+                ))
             ) : (
               <p className="rag-summary-empty">No projects with open critical issues</p>
             )}
           </div>
         </div>
       </div>
+      
+      {/* Issue Detail Modal */}
+      {selectedProject && (
+        <IssueDetailModal 
+          project={selectedProject} 
+          onClose={() => setSelectedProject(null)} 
+        />
+      )}
     </div>
   );
 };
