@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { Search } from 'lucide-react';
 import MetricsCards from '../components/MetricsCards';
 import ProjectsTable from '../components/ProjectsTable';
 import ImportModal from '../components/ImportModal';
@@ -14,6 +15,7 @@ function Dashboard() {
     status: 'All',
     client: 'All'
   });
+  const [searchQuery, setSearchQuery] = useState('');
   const [showImportModal, setShowImportModal] = useState(false);
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
@@ -41,6 +43,14 @@ function Dashboard() {
 
   // Client-side filtering
   const filteredProjects = allProjects.filter(project => {
+    // Search filter (project name or client)
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      const nameMatch = (project.name || '').toLowerCase().includes(query);
+      const clientMatch = (project.client || project.clients || '').toLowerCase().includes(query);
+      if (!nameMatch && !clientMatch) return false;
+    }
+    
     // Status filter
     if (filters.status !== 'All' && project.status !== filters.status) {
       return false;
@@ -151,6 +161,8 @@ function Dashboard() {
         canAddDelete={hasPermission('projects', 'add_delete')}
         canEdit={hasPermission('projects', 'edit')}
         canImport={hasPermission('import', 'manage')}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
       />
 
       {showImportModal && (

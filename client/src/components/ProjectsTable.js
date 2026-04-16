@@ -1,9 +1,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Edit2, Trash2, Plus } from 'lucide-react';
+import { Edit2, Trash2, Plus, Search } from 'lucide-react';
 import './ProjectsTable.css';
 
-function ProjectsTable({ projects, allProjects, filters, onFilterChange, onEdit, onDelete, onNewProject, loading, onUpdateField, canAddDelete, canEdit, canImport }) {
+function ProjectsTable({ projects, allProjects, filters, onFilterChange, onEdit, onDelete, onNewProject, loading, onUpdateField, canAddDelete, canEdit, canImport, searchQuery, setSearchQuery }) {
   const navigate = useNavigate();
   const statuses = ['Yet to Start', 'On Track', 'On Hold', 'Delayed', 'Completed', 'Cancelled'];
   
@@ -109,6 +109,45 @@ function ProjectsTable({ projects, allProjects, filters, onFilterChange, onEdit,
         </div>
         
         <div className="filter-dropdowns">
+          {/* Search Input */}
+          <div className="search-input-wrapper" style={{ flex: 1, maxWidth: '300px', position: 'relative' }}>
+            <Search size={16} color="#6b7280" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+            <input
+              type="text"
+              placeholder="Search projects or clients..."
+              value={searchQuery || ''}
+              onChange={(e) => setSearchQuery && setSearchQuery(e.target.value)}
+              className="search-input"
+              style={{
+                width: '100%',
+                padding: '8px 12px 8px 36px',
+                border: '1px solid #e5e7eb',
+                borderRadius: '6px',
+                fontSize: '13px',
+                outline: 'none'
+              }}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery && setSearchQuery('')}
+                style={{
+                  position: 'absolute',
+                  right: '8px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  color: '#6b7280',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  padding: '2px 6px'
+                }}
+              >
+                Clear
+              </button>
+            )}
+          </div>
+
           <select 
             value={filters.status} 
             onChange={(e) => onFilterChange({...filters, status: e.target.value})}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { Search } from 'lucide-react';
 import PortfolioMetrics from '../components/PortfolioMetrics';
 import { 
   PortfolioProvider, 
@@ -31,6 +32,7 @@ function PortfolioContent() {
   const [ragSearchQuery, setRagSearchQuery] = useState('');
   const [ragExpandedProjectId, setRagExpandedProjectId] = useState(null);
   const [ragCategoryModal, setRagCategoryModal] = useState(null);
+  const [projectSearchQuery, setProjectSearchQuery] = useState('');
 
   useEffect(() => {
     fetchPortfolioData();
@@ -92,6 +94,19 @@ function PortfolioContent() {
   }, [ragBuckets]);
 
   const staleProjectsList = useMemo(() => ([...freshnessLists.stale, ...freshnessLists.missing]), [freshnessLists]);
+
+  // Filter projects by search query (client or project name)
+  const filteredProjects = useMemo(() => {
+    const projects = portfolioData.projects || [];
+    if (!projectSearchQuery.trim()) return projects;
+    
+    const query = projectSearchQuery.toLowerCase().trim();
+    return projects.filter(project => {
+      const nameMatch = (project.name || '').toLowerCase().includes(query);
+      const clientMatch = (project.client || project.clientName || '').toLowerCase().includes(query);
+      return nameMatch || clientMatch;
+    });
+  }, [portfolioData.projects, projectSearchQuery]);
 
   // Calculate percentage of projects updated within last 7 days
   const totalProjects = portfolioData.projects?.length || 0;
@@ -226,8 +241,58 @@ function PortfolioContent() {
 
       <div className="portfolio-main-grid">
         <div className="portfolio-main-left">
+          {/* Search Bar */}
+          <div style={{ marginBottom: '16px' }}>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '12px',
+              background: 'white',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              padding: '10px 16px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
+            }}>
+              <Search size={20} color="#6b7280" />
+              <input
+                type="text"
+                placeholder="Search by project or client..."
+                value={projectSearchQuery}
+                onChange={(e) => setProjectSearchQuery(e.target.value)}
+                style={{
+                  flex: 1,
+                  border: 'none',
+                  outline: 'none',
+                  fontSize: '14px',
+                  color: '#111827',
+                  background: 'transparent'
+                }}
+              />
+              {projectSearchQuery && (
+                <button
+                  onClick={() => setProjectSearchQuery('')}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#6b7280',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    padding: '4px 8px'
+                  }}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            {projectSearchQuery && (
+              <div style={{ marginTop: '8px', fontSize: '13px', color: '#6b7280' }}>
+                Showing {filteredProjects.length} of {portfolioData.projects?.length || 0} projects
+              </div>
+            )}
+          </div>
+
           <ProjectsTable 
-            projects={portfolioData.projects}
+            projects={filteredProjects}
             expandedProject={expandedProject}
             onToggleExpand={setExpandedProject}
           />
