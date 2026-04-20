@@ -70,7 +70,8 @@ router.get('/projects/:id/documents', authenticate, async (req, res) => {
         resourceManagementPlan: [],
         resourceAvailability: [],
         governanceCadences: [],
-        changeManagement: []
+        changeManagement: [],
+        ragStatus: ''
       });
     }
     
@@ -95,7 +96,8 @@ router.get('/projects/:id/documents', authenticate, async (req, res) => {
       resourceManagementPlan: [],
       resourceAvailability: [],
       governanceCadences: [],
-      changeManagement: []
+      changeManagement: [],
+      ragStatus: ''
     };
     
     if (workbook.SheetNames.includes('RAID Log')) {
@@ -180,6 +182,12 @@ router.get('/projects/:id/documents', authenticate, async (req, res) => {
             projectComplexity: findByLabel('complexity') || findByLabel('complex')
           }
         };
+        
+        // Read RAG Status from cell L3 (if sheet is "Project Cover Sheet")
+        if (charterSheetName.toLowerCase().includes('cover')) {
+          const ragCell = worksheet['L3'];
+          documents.ragStatus = ragCell?.v || ragCell?.w || '';
+        }
       }
     }
     
@@ -276,7 +284,7 @@ router.get('/projects/:id/scope', authenticate, async (req, res) => {
 router.put('/projects/:id/scope', authenticate, async (req, res) => {
   try {
     const { scope_included, scope_excluded } = req.body;
-    await dbAdapter.updateProjectScope(req.params.id, { scope_included, scope_excluded });
+    await dbAdapter.upsertProjectScope(req.params.id, { scope_included, scope_excluded });
     res.json({ message: 'Scope updated successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });

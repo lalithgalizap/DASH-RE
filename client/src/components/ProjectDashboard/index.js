@@ -246,6 +246,18 @@ function ProjectDashboard({ projectId, projectName, project }) {
   const metrics = calculateMetrics();
 
   const getOverallStatus = () => {
+    // Use Excel ragStatus from Project Cover Sheet if available
+    const excelRagStatus = documents?.ragStatus;
+    const validRagValues = ['red', 'amber', 'green'];
+    
+    if (excelRagStatus && validRagValues.includes(excelRagStatus.toLowerCase())) {
+      const ragLower = excelRagStatus.toLowerCase();
+      const colors = { red: '#dc2626', amber: '#f59e0b', green: '#10b981' };
+      const labels = { red: 'RED', amber: 'AMBER', green: 'GREEN' };
+      return { label: labels[ragLower], color: colors[ragLower] };
+    }
+    
+    // Fallback to calculated RAG
     if (metrics.overdueMilestones > 0 || metrics.overdueTasks > 3) return { label: 'RED', color: '#dc2626' };
     if (metrics.openRisks > 3 || metrics.openIssues > 2) return { label: 'AMBER', color: '#f59e0b' };
     return { label: 'GREEN', color: '#10b981' };
@@ -303,18 +315,20 @@ function ProjectDashboard({ projectId, projectName, project }) {
         {/* Right: Overall Status */}
         <div style={{ 
           display: 'flex', 
-          alignItems: 'center', 
-          gap: '8px'
+          alignItems: 'center',
+          gap: '8px',
+          border: '1px solid #e5e7eb',
+          borderRadius: '6px',
+          padding: '6px 12px',
+          backgroundColor: '#f9fafb'
         }}>
+          <span style={{ fontSize: '12px', fontWeight: 500, color: '#6b7280' }}>Project Status</span>
           <span style={{ 
-            width: '10px', 
-            height: '10px', 
+            width: '16px', 
+            height: '16px', 
             borderRadius: '50%', 
             backgroundColor: overallStatus.color
-          }}></span>
-          <span style={{ fontSize: '12px', fontWeight: 500, color: '#6b7280' }}>
-            Overall Status: <strong style={{ color: overallStatus.color, fontWeight: 600 }}>{overallStatus.label}</strong>
-          </span>
+          }} title={`Overall Status: ${overallStatus.label}`}></span>
         </div>
       </div>
 

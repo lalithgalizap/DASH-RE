@@ -351,25 +351,38 @@ function RaidLogTab({
         renderVisualization()
       ) : (
         <>
-          {/* RAID Stats Summary */}
-          <div style={{display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap'}}>
-            <div style={{flex: 1, minWidth: '120px', background: '#fef2f2', border: '1px solid #fecaca', padding: '12px 16px', borderRadius: '8px', textAlign: 'center'}}>
-              <div style={{fontSize: '24px', fontWeight: '700', color: '#dc2626'}}>{documents.raidDashboard?.risks || 0}</div>
-              <div style={{fontSize: '12px', color: '#991b1b', fontWeight: '600'}}>Risks</div>
-            </div>
-            <div style={{flex: 1, minWidth: '120px', background: '#eff6ff', border: '1px solid #bfdbfe', padding: '12px 16px', borderRadius: '8px', textAlign: 'center'}}>
-              <div style={{fontSize: '24px', fontWeight: '700', color: '#2563eb'}}>{documents.raidDashboard?.assumptions || 0}</div>
-              <div style={{fontSize: '12px', color: '#1e40af', fontWeight: '600'}}>Assumptions</div>
-            </div>
-            <div style={{flex: 1, minWidth: '120px', background: '#fef3c7', border: '1px solid #fcd34d', padding: '12px 16px', borderRadius: '8px', textAlign: 'center'}}>
-              <div style={{fontSize: '24px', fontWeight: '700', color: '#d97706'}}>{documents.raidDashboard?.issues || 0}</div>
-              <div style={{fontSize: '12px', color: '#92400e', fontWeight: '600'}}>Issues</div>
-            </div>
-            <div style={{flex: 1, minWidth: '120px', background: '#f0fdf4', border: '1px solid #86efac', padding: '12px 16px', borderRadius: '8px', textAlign: 'center'}}>
-              <div style={{fontSize: '24px', fontWeight: '700', color: '#16a34a'}}>{documents.raidDashboard?.dependencies || 0}</div>
-              <div style={{fontSize: '12px', color: '#166534', fontWeight: '600'}}>Dependencies</div>
-            </div>
-          </div>
+          {/* RAID Stats Summary - Calculate from raidLog data */}
+          {(() => {
+            const raidCounts = documents.raidLog.reduce((acc, item) => {
+              const type = item.Type?.toLowerCase() || '';
+              if (type.includes('risk')) acc.risks++;
+              else if (type.includes('assumption')) acc.assumptions++;
+              else if (type.includes('issue')) acc.issues++;
+              else if (type.includes('depend')) acc.dependencies++;
+              return acc;
+            }, { risks: 0, assumptions: 0, issues: 0, dependencies: 0 });
+
+            return (
+              <div style={{display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap'}}>
+                <div style={{flex: 1, minWidth: '120px', background: '#fef2f2', border: '1px solid #fecaca', padding: '12px 16px', borderRadius: '8px', textAlign: 'center'}}>
+                  <div style={{fontSize: '24px', fontWeight: '700', color: '#dc2626'}}>{raidCounts.risks}</div>
+                  <div style={{fontSize: '12px', color: '#991b1b', fontWeight: '600'}}>Risks</div>
+                </div>
+                <div style={{flex: 1, minWidth: '120px', background: '#eff6ff', border: '1px solid #bfdbfe', padding: '12px 16px', borderRadius: '8px', textAlign: 'center'}}>
+                  <div style={{fontSize: '24px', fontWeight: '700', color: '#2563eb'}}>{raidCounts.assumptions}</div>
+                  <div style={{fontSize: '12px', color: '#1e40af', fontWeight: '600'}}>Assumptions</div>
+                </div>
+                <div style={{flex: 1, minWidth: '120px', background: '#fef3c7', border: '1px solid #fcd34d', padding: '12px 16px', borderRadius: '8px', textAlign: 'center'}}>
+                  <div style={{fontSize: '24px', fontWeight: '700', color: '#d97706'}}>{raidCounts.issues}</div>
+                  <div style={{fontSize: '12px', color: '#92400e', fontWeight: '600'}}>Issues</div>
+                </div>
+                <div style={{flex: 1, minWidth: '120px', background: '#f0fdf4', border: '1px solid #86efac', padding: '12px 16px', borderRadius: '8px', textAlign: 'center'}}>
+                  <div style={{fontSize: '24px', fontWeight: '700', color: '#16a34a'}}>{raidCounts.dependencies}</div>
+                  <div style={{fontSize: '12px', color: '#166534', fontWeight: '600'}}>Dependencies</div>
+                </div>
+              </div>
+            );
+          })()}
           <div className="plan-filters" style={{display: 'flex', gap: '12px', marginBottom: '15px', flexWrap: 'wrap', alignItems: 'center'}}>
             <span style={{fontSize: '13px', fontWeight: '600', color: '#374151'}}>Filters:</span>
             

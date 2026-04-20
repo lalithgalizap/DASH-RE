@@ -183,12 +183,17 @@ export const calculateProjectMetrics = (documents) => {
     return isIssue && isOpen;
   });
   
-  const ragStatus = calculateRAGStatus(
-    overdueMilestoneDetails.length,
-    overdueTasks,
-    openCriticalRisksDetails.length,
-    openCriticalIssuesDetails.length
-  );
+  // Use Excel ragStatus from Project Cover Sheet if available, otherwise calculate
+  const excelRagStatus = documents.ragStatus;
+  const validRagValues = ['red', 'amber', 'green'];
+  const ragStatus = excelRagStatus && validRagValues.includes(excelRagStatus.toLowerCase())
+    ? excelRagStatus.charAt(0).toUpperCase() + excelRagStatus.slice(1).toLowerCase()
+    : calculateRAGStatus(
+        overdueMilestoneDetails.length,
+        overdueTasks,
+        openCriticalRisksDetails.length,
+        openCriticalIssuesDetails.length
+      );
   
   return {
     ragStatus,
