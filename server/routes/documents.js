@@ -68,6 +68,7 @@ router.get('/projects/:id/documents', authenticate, async (req, res) => {
         stakeholderRegister: [],
         raciMatrix: [],
         resourceManagementPlan: [],
+        resourceAvailability: [],
         governanceCadences: [],
         changeManagement: []
       });
@@ -92,6 +93,7 @@ router.get('/projects/:id/documents', authenticate, async (req, res) => {
       stakeholderRegister: [],
       raciMatrix: [],
       resourceManagementPlan: [],
+      resourceAvailability: [],
       governanceCadences: [],
       changeManagement: []
     };
@@ -206,6 +208,16 @@ router.get('/projects/:id/documents', authenticate, async (req, res) => {
     if (resourceSheetName) {
       const worksheet = workbook.Sheets[resourceSheetName];
       documents.resourceManagementPlan = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+    }
+
+    // Parse Resource Availability sheet for holiday/leave data
+    if (workbook.SheetNames.includes('Resource Availability')) {
+      const worksheet = workbook.Sheets['Resource Availability'];
+      const allRows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+      // Filter rows that have a Resource Name
+      documents.resourceAvailability = allRows.filter(row => 
+        row['Resource Name'] && String(row['Resource Name']).trim() !== ''
+      );
     }
     
     // Try different possible sheet names for Governance

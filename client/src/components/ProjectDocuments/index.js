@@ -58,6 +58,8 @@ function ProjectDocuments({ projectId, projectName, canEdit }) {
   });
 
   const [resourceSearch, setResourceSearch] = useState('');
+  const [selectedResource, setSelectedResource] = useState(null);
+  const [showResourceModal, setShowResourceModal] = useState(false);
 
   const [riskFilters, setRiskFilters] = useState({
     'Impact Area': '',
@@ -317,6 +319,10 @@ function ProjectDocuments({ projectId, projectName, canEdit }) {
             documents={documents}
             resourceSearch={resourceSearch}
             setResourceSearch={setResourceSearch}
+            selectedResource={selectedResource}
+            setSelectedResource={setSelectedResource}
+            showResourceModal={showResourceModal}
+            setShowResourceModal={setShowResourceModal}
           />
         );
       case 'change':
