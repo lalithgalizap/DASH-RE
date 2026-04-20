@@ -137,24 +137,39 @@ router.get('/projects/:id/documents', authenticate, async (req, res) => {
       const data = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
       
       if (data.length > 0) {
-        // Find value by looking for label in 'Project Name' or '__EMPTY_5' columns
+        // Find value by searching all columns for label/value pairs
         const findByLabel = (label) => {
+          const labelLower = label.toLowerCase();
           for (const row of data) {
-            // Check 'Project Name' column for labels (values in __EMPTY_1)
-            const labelCell = row['Project Name'];
-            if (labelCell && String(labelCell).toLowerCase().includes(label.toLowerCase())) {
-              const val = row['__EMPTY_1'];
-              if (val && String(val).trim() !== '') {
-                return val;
+            const keys = Object.keys(row);
+            for (let i = 0; i < keys.length; i++) {
+              const key = keys[i];
+              const value = row[key];
+              // If this cell contains the label text
+              if (value && String(value).toLowerCase().includes(labelLower)) {
+                // Check next column(s) for the actual value
+                for (let j = i + 1; j < keys.length && j <= i + 3; j++) {
+                  const nextKey = keys[j];
+                  const nextVal = row[nextKey];
+                  if (nextVal && String(nextVal).trim() !== '' && 
+                      !String(nextVal).toLowerCase().includes(labelLower)) {
+                    return nextVal;
+                  }
+                }
               }
             }
-            // Check '__EMPTY_5' column for labels (values in __EMPTY_7)
+          }
+          // Fallback to original logic for backward compatibility
+          for (const row of data) {
+            const labelCell = row['Project Name'];
+            if (labelCell && String(labelCell).toLowerCase().includes(labelLower)) {
+              const val = row['__EMPTY_1'];
+              if (val && String(val).trim() !== '') return val;
+            }
             const labelCell2 = row['__EMPTY_5'];
-            if (labelCell2 && String(labelCell2).toLowerCase().includes(label.toLowerCase())) {
+            if (labelCell2 && String(labelCell2).toLowerCase().includes(labelLower)) {
               const val = row['__EMPTY_7'];
-              if (val && String(val).trim() !== '') {
-                return val;
-              }
+              if (val && String(val).trim() !== '') return val;
             }
           }
           return '';
