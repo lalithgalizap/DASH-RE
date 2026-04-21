@@ -2,10 +2,50 @@ const express = require('express');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
+const XLSX = require('xlsx');
 const dbAdapter = require('../dbAdapter');
 const { authenticate, requirePermission } = require('../auth');
 
 const router = express.Router();
+
+// Helper: extract project manager (owner) from uploaded Excel charter
+function getOwnerFromExcel(projectName) {
+  try {
+    const filePath = path.join(__dirname, '..', '..', 'project-documents', `${projectName}.xlsx`);
+    if (!fs.existsSync(filePath)) return null;
+
+    const workbook = XLSX.readFile(filePath);
+    const charterSheetName = workbook.SheetNames.find(name =>
+      name.toLowerCase().includes('charter') || name.toLowerCase().includes('cover') || name.toLowerCase().includes('project')
+    );
+    if (!charterSheetName) return null;
+
+    const worksheet = workbook.Sheets[charterSheetName];
+    const data = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+
+    const labelLower = 'project manager';
+    for (const row of data) {
+      const keys = Object.keys(row);
+      for (let i = 0; i < keys.length; i++) {
+        const key = keys[i];
+        const value = row[key];
+        if (value && String(value).toLowerCase().includes(labelLower)) {
+          for (let j = i + 1; j < keys.length && j <= i + 3; j++) {
+            const nextKey = keys[j];
+            const nextVal = row[nextKey];
+            if (nextVal && String(nextVal).trim() !== '' &&
+                !String(nextVal).toLowerCase().includes(labelLower)) {
+              return String(nextVal).trim();
+            }
+          }
+        }
+      }
+    }
+    return null;
+  } catch (err) {
+    return null;
+  }
+}
 
 // Configure multer for project documents
 const projectDocStorage = multer.diskStorage({
@@ -52,7 +92,17 @@ router.get('/', async (req, res) => {
   try {
     const { priority, stage, status, client } = req.query;
     const projects = await dbAdapter.getAllProjects({ priority, stage, status, client });
-    res.json(projects);
+
+    // Fallback: if owner is empty, read it from the uploaded Excel charter
+    const enriched = projects.map(p => {
+      if (!p.owner && p.name) {
+        const excelOwner = getOwnerFromExcel(p.name);
+        if (excelOwner) p.owner = excelOwner;
+      }
+      return p;
+    });
+
+    res.json(enriched);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

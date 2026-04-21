@@ -28,11 +28,22 @@ function Dashboard() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [projectsRes, metricsRes] = await Promise.all([
+      const [projectsRes, metricsRes, fileStatusRes] = await Promise.all([
         axios.get('/api/projects'),
-        axios.get('/api/metrics')
+        axios.get('/api/metrics'),
+        axios.get('/api/projects-file-status')
       ]);
-      setAllProjects(projectsRes.data);
+
+      const fileStatusMap = new Map(
+        (fileStatusRes.data?.projects || []).map(item => [String(item.projectId), item])
+      );
+
+      const projectsWithLastModified = projectsRes.data.map(project => {
+        const fileInfo = fileStatusMap.get(String(project._id || project.id));
+        return { ...project, lastModified: fileInfo?.lastModified || null };
+      });
+
+      setAllProjects(projectsWithLastModified);
       setMetrics(metricsRes.data);
     } catch (error) {
       console.error('Error fetching data:', error);

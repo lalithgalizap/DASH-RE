@@ -149,6 +149,13 @@
   color: #6b7280;
 }
 
+.project-owner,
+.project-last-updated {
+  font-size: 13px;
+  color: #374151;
+  white-space: nowrap;
+}
+
 .badge {
   display: inline-block;
   padding: 4px 10px;

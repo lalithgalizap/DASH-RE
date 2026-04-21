@@ -307,7 +307,7 @@ function ProjectDashboard({ projectId, projectName, project }) {
             <span style={{ color: '#d1d5db' }}>|</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span style={{ fontWeight: 500 }}>Last Updated:</span>
-              <strong style={{ color: '#111827', fontWeight: 600 }}>{formatDate(lastRefresh)}</strong>
+              <strong style={{ color: '#111827', fontWeight: 600 }}>{project?.lastModified ? new Date(project.lastModified).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'}</strong>
             </span>
           </div>
         </div>

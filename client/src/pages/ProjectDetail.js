@@ -28,8 +28,19 @@ function ProjectDetail() {
   const fetchProjectDetails = async () => {
     try {
       setLoading(true);
-      const projectRes = await axios.get(`/api/projects/${id}`);
-      setProject(projectRes.data);
+      const [projectRes, fileStatusRes] = await Promise.all([
+        axios.get(`/api/projects/${id}`),
+        axios.get('/api/projects-file-status')
+      ]);
+
+      const projectData = projectRes.data;
+      const fileStatusList = fileStatusRes.data?.projects || [];
+      const fileInfo = fileStatusList.find(
+        f => String(f.projectId) === String(projectData._id || projectData.id)
+      );
+      projectData.lastModified = fileInfo?.lastModified || null;
+
+      setProject(projectData);
     } catch (error) {
       console.error('Error fetching project details:', error);
     } finally {

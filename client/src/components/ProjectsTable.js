@@ -192,6 +192,8 @@ function ProjectsTable({ projects, allProjects, filters, onFilterChange, onEdit,
               <tr>
                 <th>PROJECT</th>
                 <th>CLIENT</th>
+                <th>OWNER</th>
+                <th>LAST UPDATED</th>
                 <th>SUMMARY</th>
                 <th>STATUS</th>
                 <th>ACTIONS</th>
@@ -214,6 +216,16 @@ function ProjectsTable({ projects, allProjects, filters, onFilterChange, onEdit,
                   <td>
                     <div className="client-name">
                       {project.clients || '-'}
+                    </div>
+                  </td>
+                  <td>
+                    <div className="project-owner">
+                      {project.owner || '-'}
+                    </div>
+                  </td>
+                  <td>
+                    <div className="project-last-updated">
+                      {project.lastModified ? new Date(project.lastModified).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
                     </div>
                   </td>
                   <td>
