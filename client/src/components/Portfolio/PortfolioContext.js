@@ -25,7 +25,8 @@ export const PortfolioProvider = ({ children }) => {
     projectsWithOverdueMilestones: 0,
     upcomingMilestonesTotal: 0,
     openCriticalRisksTotal: 0,
-    openCriticalIssuesTotal: 0
+    openCriticalIssuesTotal: 0,
+    openEscalationsTotal: 0
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -45,6 +46,12 @@ export const PortfolioProvider = ({ children }) => {
     openCriticalRisksDetails: [],
     openCriticalIssues: 0,
     openCriticalIssuesDetails: [],
+    openEscalations: 0,
+    openEscalationsDetails: [],
+    projectCompletion: 0,
+    totalTasks: 0,
+    completedTasks: 0,
+    projectPlan: [],
     projectCharter: project.projectCharter || null
   });
 
@@ -197,7 +204,8 @@ export const PortfolioProvider = ({ children }) => {
       const upcomingMilestonesTotal = activeEligibleProjects.reduce((sum, p) => sum + (p.upcomingMilestones || 0), 0);
       const openCriticalRisksTotal = activeEligibleProjects.reduce((sum, p) => sum + (p.openCriticalRisks || 0), 0);
       const openCriticalIssuesTotal = activeEligibleProjects.reduce((sum, p) => sum + (p.openCriticalIssues || 0), 0);
-      
+      const openEscalationsTotal = activeEligibleProjects.reduce((sum, p) => sum + (p.openEscalations || 0), 0);
+
       setPortfolioData({
         projects: projectsWithLastModified,
         totalActiveProjects: activeCount,
@@ -210,7 +218,8 @@ export const PortfolioProvider = ({ children }) => {
         projectsWithOverdueMilestones,
         upcomingMilestonesTotal,
         openCriticalRisksTotal,
-        openCriticalIssuesTotal
+        openCriticalIssuesTotal,
+        openEscalationsTotal
       });
     } catch (err) {
       console.error('Error fetching portfolio data:', err);

@@ -50,6 +50,12 @@ function PortfolioMetrics({ metrics, onMetricClick }) {
           <div className="metric-label">Open Critical Issues</div>
           <div className="metric-sublabel">All open issues</div>
         </div>
+
+        <div className="metric-card metric-card-red" onClick={() => handleClick('escalations')} style={{cursor: 'pointer'}}>
+          <div className="metric-value">{metrics.openEscalationsTotal || 0}</div>
+          <div className="metric-label">Open Escalations</div>
+          <div className="metric-sublabel">Flagged as escalated and not closed</div>
+        </div>
       </div>
     </div>
   );

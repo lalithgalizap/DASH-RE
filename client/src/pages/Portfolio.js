@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import PortfolioMetrics from '../components/PortfolioMetrics';
 import { 
@@ -13,12 +14,15 @@ import {
   UpcomingMilestonesModal,
   CriticalRisksModal,
   CriticalIssuesModal,
+  EscalationsModal,
+  ProjectRadialView,
   SummaryModal,
   RAGCategoryModal
 } from '../components/Portfolio';
 import './Portfolio.css';
 
 function PortfolioContent() {
+  const navigate = useNavigate();
   const { portfolioData, loading, error, fetchPortfolioData } = usePortfolio();
   const [showRAGProjectsModal, setShowRAGProjectsModal] = useState(false);
   const [showUpdatedProjectsModal, setShowUpdatedProjectsModal] = useState(false);
@@ -26,7 +30,8 @@ function PortfolioContent() {
   const [showUpcomingMilestonesModal, setShowUpcomingMilestonesModal] = useState(false);
   const [showOpenCriticalRisksModal, setShowOpenCriticalRisksModal] = useState(false);
   const [showOpenCriticalIssuesModal, setShowOpenCriticalIssuesModal] = useState(false);
-  const [expandedProject, setExpandedProject] = useState(null);
+  const [showOpenEscalationsModal, setShowOpenEscalationsModal] = useState(false);
+  const [radialViewProject, setRadialViewProject] = useState(null);
   const [summaryModal, setSummaryModal] = useState(null);
   const [milestoneTooltip, setMilestoneTooltip] = useState(null);
   const [ragSearchQuery, setRagSearchQuery] = useState('');
@@ -229,6 +234,7 @@ function PortfolioContent() {
             if (type === 'upcoming') setShowUpcomingMilestonesModal(true);
             if (type === 'criticalRisks') setShowOpenCriticalRisksModal(true);
             if (type === 'criticalIssues') setShowOpenCriticalIssuesModal(true);
+            if (type === 'escalations') setShowOpenEscalationsModal(true);
           }}
         />
 
@@ -297,8 +303,7 @@ function PortfolioContent() {
 
           <ProjectsTable 
             projects={filteredProjects}
-            expandedProject={expandedProject}
-            onToggleExpand={setExpandedProject}
+            onProjectClick={(project) => setRadialViewProject(project)}
           />
         </div>
 
@@ -316,7 +321,19 @@ function PortfolioContent() {
         staleProjectsList={staleProjectsList}
       />
 
-      {/* RAG Category Modal - View All Projects */}
+      {/* Project Radial View */}
+      <ProjectRadialView
+        project={radialViewProject}
+        isOpen={!!radialViewProject}
+        onClose={() => setRadialViewProject(null)}
+        onMetricClick={(metricId, project) => {
+          // Navigate to metric detail or project page
+          if (metricId === 'rag' || metricId === 'timeline') {
+            navigate(`/project/${project.id || project._id}`);
+          }
+        }}
+      />
+
       <RAGCategoryModal
         isOpen={!!ragCategoryModal}
         onClose={() => setRagCategoryModal(null)}
@@ -376,6 +393,13 @@ function PortfolioContent() {
       <CriticalIssuesModal 
         isOpen={showOpenCriticalIssuesModal} 
         onClose={() => setShowOpenCriticalIssuesModal(false)} 
+        projects={portfolioData.projects}
+      />
+
+      {/* Open Escalations Modal */}
+      <EscalationsModal 
+        isOpen={showOpenEscalationsModal} 
+        onClose={() => setShowOpenEscalationsModal(false)} 
         projects={portfolioData.projects}
       />
       </div>

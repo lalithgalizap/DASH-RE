@@ -3,6 +3,7 @@ export { PortfolioProvider, usePortfolio } from './PortfolioContext';
 export { default as PortfolioHeader } from './PortfolioHeader';
 export { default as RAGBoard } from './RAGBoard';
 export { default as RAGProjectCard } from './RAGProjectCard';
+export { default as RAGProjectCardCompact } from './RAGProjectCardCompact';
 export { default as ProjectsTable } from './ProjectsTable';
 export { default as RAGBoardWithSearch } from './RAGBoardWithSearch';
 export { default as RAGProjectsModal } from './modals/RAGProjectsModal';
@@ -11,6 +12,9 @@ export { default as OverdueMilestonesModal } from './modals/OverdueMilestonesMod
 export { default as UpcomingMilestonesModal } from './modals/UpcomingMilestonesModal';
 export { default as CriticalRisksModal } from './modals/CriticalRisksModal';
 export { default as CriticalIssuesModal } from './modals/CriticalIssuesModal';
+export { default as EscalationsModal } from './modals/EscalationsModal';
+export { default as EscalationDetailModal } from './modals/EscalationDetailModal';
+export { default as ProjectRadialView } from './modals/ProjectRadialView';
 export { default as SummaryModal } from './modals/SummaryModal';
 export { default as CriticalItemsDetailModal } from './modals/CriticalItemsDetailModal';
 export { default as MilestoneDetailModal } from './modals/MilestoneDetailModal';

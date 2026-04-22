@@ -182,7 +182,16 @@ export const calculateProjectMetrics = (documents) => {
     const isOpen = r.Status && r.Status.toLowerCase() !== 'closed' && r.Status.toLowerCase() !== 'resolved';
     return isIssue && isOpen;
   });
-  
+
+  // Open escalations: Mitigation Strategy = "Escalate" and no Closed Date
+  const openEscalationsDetails = raidLog.filter(r => {
+    const mitigation = r['Mitigation Strategy'] || r.MitigationStrategy || '';
+    const isEscalate = mitigation.toLowerCase() === 'escalate';
+    const closedDate = r['Closed Date'] || r.ClosedDate || r['Closed'] || r.closedDate;
+    const isNotClosed = !closedDate || String(closedDate).trim() === '' || String(closedDate).toLowerCase() === 'n/a';
+    return isEscalate && isNotClosed;
+  });
+
   // Use Excel ragStatus from Project Cover Sheet if available, otherwise calculate
   const excelRagStatus = documents.ragStatus;
   const validRagValues = ['red', 'amber', 'green'];
@@ -194,6 +203,13 @@ export const calculateProjectMetrics = (documents) => {
         openCriticalRisksDetails.length,
         openCriticalIssuesDetails.length
       );
+  
+  // Project completion calculation
+  const totalTasks = tasks.length;
+  const completedTasks = tasks.filter(t => 
+    t.Status && (t.Status.toLowerCase() === 'completed' || t.Status.toLowerCase() === 'complete')
+  ).length;
+  const projectCompletion = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
   
   return {
     ragStatus,
@@ -207,6 +223,12 @@ export const calculateProjectMetrics = (documents) => {
     openCriticalRisksDetails,
     openCriticalIssues: openCriticalIssuesDetails.length,
     openCriticalIssuesDetails,
-    projectCharter: documents.projectCharter
+    openEscalations: openEscalationsDetails.length,
+    openEscalationsDetails,
+    projectCharter: documents.projectCharter,
+    projectCompletion,
+    totalTasks,
+    completedTasks,
+    projectPlan: tasks
   };
 };

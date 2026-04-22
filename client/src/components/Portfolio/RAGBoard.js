@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import RAGProjectCard from './RAGProjectCard';
+import RAGProjectCardCompact from './RAGProjectCardCompact';
 
 const RAGBoard = ({ 
   projects, 
@@ -8,6 +9,7 @@ const RAGBoard = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedProjectId, setExpandedProjectId] = useState(null);
+  const [collapsedColumns, setCollapsedColumns] = useState({});
 
   // Filter projects based on search
   const filteredProjects = useMemo(() => {
@@ -33,192 +35,134 @@ const RAGBoard = ({
     setExpandedProjectId(expandedProjectId === projectId ? null : projectId);
   };
 
+  const toggleColumn = (column) => {
+    setCollapsedColumns(prev => ({
+      ...prev,
+      [column]: !prev[column]
+    }));
+  };
+
+  const renderColumn = (key, title, colorConfig, projects) => {
+    const isCollapsed = collapsedColumns[key];
+    const count = projects.length;
+    const hasExpanded = expandedProjectId && projects.some(p => (p.id || p._id) === expandedProjectId);
+
+    return (
+      <div className={`rag-column rag-column-${key} ${isCollapsed ? 'collapsed' : ''}`}>
+        <div 
+          className="rag-column-header"
+          style={{ background: colorConfig.bg, borderBottomColor: colorConfig.border }}
+          onClick={() => toggleColumn(key)}
+        >
+          <span className="rag-column-indicator" style={{ background: colorConfig.dot }} />
+          <span className="rag-column-title" style={{ color: colorConfig.text }}>{title}</span>
+          <span className="rag-column-count" style={{ 
+            color: colorConfig.countText, 
+            background: colorConfig.countBg 
+          }}>
+            {count}
+          </span>
+          <span className={`rag-column-chevron ${isCollapsed ? 'collapsed' : ''}`}>⌄</span>
+        </div>
+        
+        {!isCollapsed && (
+          <div className="rag-column-content">
+            {projects.map(project => {
+              const projectId = project.id || project._id;
+              const isExpanded = expandedProjectId === projectId;
+              
+              return (
+                <div key={projectId} className="rag-project-wrapper">
+                  {isExpanded ? (
+                    <RAGProjectCard
+                      project={project}
+                      isExpanded={true}
+                      onToggle={() => handleToggleExpand(projectId)}
+                      onMilestoneClick={onMilestoneClick}
+                      onClick={() => onProjectClick(project)}
+                    />
+                  ) : (
+                    <RAGProjectCardCompact
+                      project={project}
+                      onClick={() => onProjectClick(project)}
+                      onToggle={() => handleToggleExpand(projectId)}
+                    />
+                  )}
+                </div>
+              );
+            })}
+            
+            {count === 0 && (
+              <div className="rag-empty-state">
+                No {key} projects
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="rag-board">
-      {/* Search */}
-      <div className="rag-board-search-container" style={{ margin: '0 24px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <span style={{ fontSize: '14px', color: '#6b7280', fontWeight: 500 }}>Search Projects:</span>
-        <input
-          type="text"
-          placeholder="Search by project name, client, or owner..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          style={{
-            flex: 1,
-            maxWidth: '400px',
-            padding: '8px 12px',
-            border: '1px solid #e5e7eb',
-            borderRadius: '6px',
-            fontSize: '14px',
-            outline: 'none'
-          }}
-        />
+      {/* Modern Search Bar */}
+      <div className="rag-board-search-container">
+        <div className="rag-search-wrapper">
+          <svg className="rag-search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.35-4.35"></path>
+          </svg>
+          <input
+            type="text"
+            placeholder="Search projects by name, client, or owner..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <button className="rag-search-clear" onClick={() => setSearchQuery('')}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          )}
+        </div>
+        
         {searchQuery && (
-          <button
-            onClick={() => setSearchQuery('')}
-            style={{
-              padding: '8px 16px',
-              background: '#f3f4f6',
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '13px',
-              color: '#374151',
-              cursor: 'pointer'
-            }}
-          >
-            Clear
-          </button>
+          <div className="rag-search-results">
+            Showing {filteredProjects.length} of {projects?.length || 0} projects
+          </div>
         )}
       </div>
 
-      {/* RAG Columns */}
-      <div className="rag-board-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', padding: '0 24px' }}>
-        {/* Red Column */}
-        <div className="rag-column rag-column-red">
-          <div className="rag-column-header" style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '8px', 
-            padding: '12px 16px', 
-            background: '#fef2f2',
-            borderRadius: '8px 8px 0 0',
-            borderBottom: '2px solid #fecaca'
-          }}>
-            <span style={{ 
-              width: '12px', 
-              height: '12px', 
-              borderRadius: '50%', 
-              background: '#ef4444' 
-            }} />
-            <span style={{ fontWeight: 600, color: '#991b1b' }}>Critical</span>
-            <span style={{ 
-              marginLeft: 'auto', 
-              fontSize: '14px', 
-              fontWeight: 600, 
-              color: '#dc2626',
-              background: '#fee2e2',
-              padding: '2px 10px',
-              borderRadius: '12px'
-            }}>
-              {ragBuckets.red.length}
-            </span>
-          </div>
-          <div className="rag-column-content" style={{ padding: '12px', background: '#fafafa', minHeight: '400px' }}>
-            {ragBuckets.red.map(project => (
-              <RAGProjectCard
-                key={project.id || project._id}
-                project={project}
-                isExpanded={expandedProjectId === (project.id || project._id)}
-                onToggle={() => handleToggleExpand(project.id || project._id)}
-                onMilestoneClick={onMilestoneClick}
-                onClick={() => onProjectClick(project)}
-              />
-            ))}
-            {ragBuckets.red.length === 0 && (
-              <div style={{ textAlign: 'center', padding: '40px 20px', color: '#9ca3af' }}>
-                No critical projects
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Amber Column */}
-        <div className="rag-column rag-column-amber">
-          <div className="rag-column-header" style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '8px', 
-            padding: '12px 16px', 
-            background: '#fffbeb',
-            borderRadius: '8px 8px 0 0',
-            borderBottom: '2px solid #fcd34d'
-          }}>
-            <span style={{ 
-              width: '12px', 
-              height: '12px', 
-              borderRadius: '50%', 
-              background: '#f59e0b' 
-            }} />
-            <span style={{ fontWeight: 600, color: '#92400e' }}>Caution</span>
-            <span style={{ 
-              marginLeft: 'auto', 
-              fontSize: '14px', 
-              fontWeight: 600, 
-              color: '#d97706',
-              background: '#fef3c7',
-              padding: '2px 10px',
-              borderRadius: '12px'
-            }}>
-              {ragBuckets.amber.length}
-            </span>
-          </div>
-          <div className="rag-column-content" style={{ padding: '12px', background: '#fafafa', minHeight: '400px' }}>
-            {ragBuckets.amber.map(project => (
-              <RAGProjectCard
-                key={project.id || project._id}
-                project={project}
-                isExpanded={expandedProjectId === (project.id || project._id)}
-                onToggle={() => handleToggleExpand(project.id || project._id)}
-                onMilestoneClick={onMilestoneClick}
-                onClick={() => onProjectClick(project)}
-              />
-            ))}
-            {ragBuckets.amber.length === 0 && (
-              <div style={{ textAlign: 'center', padding: '40px 20px', color: '#9ca3af' }}>
-                No caution projects
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Green Column */}
-        <div className="rag-column rag-column-green">
-          <div className="rag-column-header" style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '8px', 
-            padding: '12px 16px', 
-            background: '#f0fdf4',
-            borderRadius: '8px 8px 0 0',
-            borderBottom: '2px solid #86efac'
-          }}>
-            <span style={{ 
-              width: '12px', 
-              height: '12px', 
-              borderRadius: '50%', 
-              background: '#10b981' 
-            }} />
-            <span style={{ fontWeight: 600, color: '#166534' }}>On Track</span>
-            <span style={{ 
-              marginLeft: 'auto', 
-              fontSize: '14px', 
-              fontWeight: 600, 
-              color: '#059669',
-              background: '#d1fae5',
-              padding: '2px 10px',
-              borderRadius: '12px'
-            }}>
-              {ragBuckets.green.length}
-            </span>
-          </div>
-          <div className="rag-column-content" style={{ padding: '12px', background: '#fafafa', minHeight: '400px' }}>
-            {ragBuckets.green.map(project => (
-              <RAGProjectCard
-                key={project.id || project._id}
-                project={project}
-                isExpanded={expandedProjectId === (project.id || project._id)}
-                onToggle={() => handleToggleExpand(project.id || project._id)}
-                onMilestoneClick={onMilestoneClick}
-                onClick={() => onProjectClick(project)}
-              />
-            ))}
-            {ragBuckets.green.length === 0 && (
-              <div style={{ textAlign: 'center', padding: '40px 20px', color: '#9ca3af' }}>
-                No on-track projects
-              </div>
-            )}
-          </div>
-        </div>
+      {/* RAG Columns - Modern Grid */}
+      <div className="rag-board-grid">
+        {renderColumn('red', 'Critical', {
+          bg: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
+          border: '#fecaca',
+          dot: '#ef4444',
+          text: '#991b1b',
+          countText: '#dc2626',
+          countBg: '#fecaca'
+        }, ragBuckets.red)}
+        
+        {renderColumn('amber', 'Caution', {
+          bg: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
+          border: '#fcd34d',
+          dot: '#f59e0b',
+          text: '#92400e',
+          countText: '#d97706',
+          countBg: '#fcd34d'
+        }, ragBuckets.amber)}
+        
+        {renderColumn('green', 'On Track', {
+          bg: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+          border: '#86efac',
+          dot: '#10b981',
+          text: '#166534',
+          countText: '#059669',
+          countBg: '#86efac'
+        }, ragBuckets.green)}
       </div>
     </div>
   );
