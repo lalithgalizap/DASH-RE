@@ -68,6 +68,17 @@ function RiskRegisterTab({
 
   const formatValue = (value, column) => {
     if (value === '' || value === null || value === undefined) return '-';
+    if (column === '% Complete') return `${(value * 100).toFixed(0)}%`;
+    
+    // Convert Excel serial numbers to dates (like MilestonesTab does)
+    if (typeof value === 'number' && value > 40000 && value < 50000) {
+      const utcDate = new Date(Date.UTC(1899, 11, 30) + value * 86400 * 1000);
+      const month = String(utcDate.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(utcDate.getUTCDate()).padStart(2, '0');
+      const year = utcDate.getUTCFullYear();
+      return `${month}/${day}/${year}`;
+    }
+    
     return value;
   };
 
