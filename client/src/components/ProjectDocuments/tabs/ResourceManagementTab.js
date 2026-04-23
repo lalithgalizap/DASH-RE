@@ -80,7 +80,7 @@ function ResourceManagementTab({
   // Find the actual resource name column from the data
   const resourceNameColumn = findColumn('RESOURCE NAME') || findColumn('Name') || allColumns.find(col => col.toLowerCase().includes('name'));
 
-  // Merge resource data with availability (holidays) by name
+  // Merge resource data with leave plan (holidays) by name
   const getResourceWithHolidays = (resource) => {
     const resourceName = resourceNameColumn ? resource[resourceNameColumn] : '';
     
@@ -99,8 +99,8 @@ function ResourceManagementTab({
     setShowResourceModal(true);
   };
 
-  // Collapsible Resource Availability Section Component
-  const ResourceAvailabilitySection = ({ holidayDetails, formatDate }) => {
+  // Collapsible Resource Leave Plan Section Component
+  const ResourceLeavePlanSection = ({ holidayDetails, formatDate }) => {
     const [isExpanded, setIsExpanded] = useState(true);
     const holidayCount = holidayDetails?.length || 0;
 
@@ -120,7 +120,7 @@ function ResourceManagementTab({
           }}
         >
           <h4 style={{margin: 0, color: '#374151', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px'}}>
-            Resource Availability 
+            Resource Leave Plan 
             <span style={{
               backgroundColor: '#3b82f6',
               color: 'white',
@@ -200,7 +200,7 @@ function ResourceManagementTab({
                 </tbody>
               </table>
             ) : (
-              <p style={{color: '#6b7280', margin: 0, fontStyle: 'italic'}}>No availability records for this resource.</p>
+              <p style={{color: '#6b7280', margin: 0, fontStyle: 'italic'}}>No leave records for this resource.</p>
             )}
           </div>
         )}
@@ -256,8 +256,8 @@ function ResourceManagementTab({
               })}
             </div>
 
-            {/* Resource Availability Section */}
-            <ResourceAvailabilitySection holidayDetails={selectedResource.holidayDetails} formatDate={formatDate} />
+            {/* Resource Leave Plan Section */}
+            <ResourceLeavePlanSection holidayDetails={selectedResource.holidayDetails} formatDate={formatDate} />
           </div>
         </div>
       </div>

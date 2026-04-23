@@ -233,12 +233,15 @@ router.get('/projects/:id/documents', authenticate, async (req, res) => {
       documents.resourceManagementPlan = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
     }
 
-    // Parse Resource Availability sheet for holiday/leave data
-    if (workbook.SheetNames.includes('Resource Availability')) {
-      const worksheet = workbook.Sheets['Resource Availability'];
+    // Parse Resource Leave Plan sheet for holiday/leave data (supports old 'Resource Availability' name too)
+    const leavePlanSheetName = workbook.SheetNames.find(name =>
+      name === 'Resource Leave Plan' || name === 'Resource Availability'
+    );
+    if (leavePlanSheetName) {
+      const worksheet = workbook.Sheets[leavePlanSheetName];
       const allRows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
       // Filter rows that have a Resource Name
-      documents.resourceAvailability = allRows.filter(row => 
+      documents.resourceAvailability = allRows.filter(row =>
         row['Resource Name'] && String(row['Resource Name']).trim() !== ''
       );
     }
