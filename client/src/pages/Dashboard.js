@@ -20,6 +20,7 @@ function Dashboard() {
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [errorPopup, setErrorPopup] = useState({ show: false, message: '' });
 
   useEffect(() => {
     fetchData();
@@ -107,7 +108,8 @@ function Dashboard() {
       fetchData();
     } catch (error) {
       console.error('Error saving project:', error);
-      alert('Error saving project.');
+      const message = error.response?.data?.message || error.response?.data?.error || 'Error saving project. Please try again.';
+      setErrorPopup({ show: true, message });
     }
   };
 
@@ -194,6 +196,63 @@ function Dashboard() {
           canManageClients={editingProject ? hasPermission('projects', 'edit') : hasPermission('projects', 'add_delete')}
           canAddClients={canAddClients()}
         />
+      )}
+
+      {/* Error Popup */}
+      {errorPopup.show && (
+        <div 
+          className="modal-overlay" 
+          style={{ 
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2000
+          }}
+          onClick={() => setErrorPopup({ show: false, message: '' })}
+        >
+          <div 
+            style={{ 
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              padding: '24px',
+              maxWidth: '400px',
+              width: '90%',
+              boxShadow: '0 20px 25px rgba(0,0,0,0.15)',
+              textAlign: 'center'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ marginBottom: '16px' }}>
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+            </div>
+            <h3 style={{ margin: '0 0 12px 0', fontSize: '18px', color: '#1f2937' }}>Error</h3>
+            <p style={{ margin: '0 0 20px 0', color: '#6b7280', fontSize: '14px', lineHeight: '1.5' }}>
+              {errorPopup.message}
+            </p>
+            <button
+              onClick={() => setErrorPopup({ show: false, message: '' })}
+              style={{
+                backgroundColor: '#ef4444',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '10px 24px',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: 'pointer'
+              }}
+            >
+              OK
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

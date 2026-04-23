@@ -1,15 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { getRAGColor, getProjectOwner, isActiveStatus } from '../utils';
 import EscalationDetailModal from './EscalationDetailModal';
+import ViewToggle from './ViewToggle';
+import ChartView from './ChartView';
 
 const EscalationsModal = ({ isOpen, onClose, projects }) => {
   const [selectedProject, setSelectedProject] = useState(null);
-
-  if (!isOpen) return null;
+  const [searchTerm, setSearchTerm] = useState('');
+  const [viewMode, setViewMode] = useState('list'); // 'list' | 'chart'
 
   // Filter out completed/cancelled projects
   const activeProjects = (projects || []).filter(p => isActiveStatus(p.status));
   const projectsWithEscalations = activeProjects.filter(p => (p.openEscalations || 0) > 0);
+
+  // Filter projects based on search term
+  const filteredProjects = useMemo(() => {
+    if (!searchTerm.trim()) return projectsWithEscalations;
+    const term = searchTerm.toLowerCase();
+    return projectsWithEscalations.filter(p => 
+      (p.name?.toLowerCase() || '').includes(term) ||
+      (getProjectOwner(p)?.toLowerCase() || '').includes(term)
+    );
+  }, [projectsWithEscalations, searchTerm]);
+
+  if (!isOpen) return null;
 
   return (
     <div className="modal-overlay" onClick={onClose} style={{ 
@@ -48,40 +62,117 @@ const EscalationsModal = ({ isOpen, onClose, projects }) => {
           }}>×</button>
         </div>
         <div className="modal-body" style={{ padding: '20px' }}>
-          <div className="critical-accordion">
-            {projectsWithEscalations.length > 0 ? (
-              projectsWithEscalations
-                .sort((a, b) => (b.openEscalations || 0) - (a.openEscalations || 0))
-                .map(project => (
-                  <div key={`escalations-${project.id || project._id}`} className="critical-project">
-                    <button
-                      type="button"
-                      className="critical-project-header"
-                      onClick={() => setSelectedProject(project)}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <div className="critical-project-info">
-                        <div className="critical-project-name">{project.name}</div>
-                        <div className="critical-meta">
-                          <span>{getProjectOwner(project)}</span>
-                          <span>•</span>
-                          <span>{project.openEscalations} escalations</span>
-                        </div>
-                      </div>
-                      <div className="critical-project-right">
-                        <span style={{ color: '#dc2626', fontWeight: '600', fontSize: '13px', marginRight: '12px' }}>
-                          {project.openEscalations} escalations
-                        </span>
-                        <span className="critical-status-dot" style={{ backgroundColor: getRAGColor(project.ragStatus) }}></span>
-                        <span className="critical-chevron">⌄</span>
-                      </div>
-                    </button>
-                  </div>
-                ))
-            ) : (
-              <p className="rag-summary-empty">No projects with open escalations</p>
+          {/* View Toggle + Search */}
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            marginBottom: '16px',
+            gap: '12px'
+          }}>
+            <ViewToggle view={viewMode} onChange={setViewMode} />
+            
+            {viewMode === 'list' && projectsWithEscalations.length > 4 && (
+              <div style={{ position: 'relative', flex: 1, maxWidth: '300px' }}>
+                <svg 
+                  width="18" 
+                  height="18" 
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="2"
+                  style={{ 
+                    position: 'absolute', 
+                    left: '12px', 
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: '#9ca3af',
+                    pointerEvents: 'none'
+                  }}
+                >
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.35-4.35" />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Search projects or owners..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px 8px 40px',
+                    fontSize: '13px',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    outline: 'none'
+                  }}
+                />
+              </div>
             )}
           </div>
+          
+          {viewMode === 'list' && searchTerm && (
+            <div style={{ 
+              marginBottom: '12px', 
+              fontSize: '12px', 
+              color: '#6b7280'
+            }}>
+              Showing {filteredProjects.length} of {projectsWithEscalations.length} projects
+            </div>
+          )}
+
+          {/* Content Area */}
+          {viewMode === 'list' ? (
+            <div style={{ 
+              maxHeight: '350px', 
+              overflowY: 'auto'
+            }}>
+              <div className="critical-accordion" style={{ border: 'none' }}>
+                {filteredProjects.length > 0 ? (
+                  filteredProjects
+                    .sort((a, b) => (b.openEscalations || 0) - (a.openEscalations || 0))
+                    .map(project => (
+                      <div key={`escalations-${project.id || project._id}`} className="critical-project">
+                        <button
+                          type="button"
+                          className="critical-project-header"
+                          onClick={() => setSelectedProject(project)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <div className="critical-project-info">
+                            <div className="critical-project-name">{project.name}</div>
+                            <div className="critical-meta">
+                              <span>{getProjectOwner(project)}</span>
+                              <span>•</span>
+                              <span>{project.openEscalations} escalations</span>
+                            </div>
+                          </div>
+                          <div className="critical-project-right">
+                            <span style={{ color: '#dc2626', fontWeight: '600', fontSize: '13px', marginRight: '12px' }}>
+                              {project.openEscalations} escalations
+                            </span>
+                            <span className="critical-status-dot" style={{ backgroundColor: getRAGColor(project.ragStatus) }}></span>
+                            <span className="critical-chevron">⌄</span>
+                          </div>
+                        </button>
+                      </div>
+                    ))
+                ) : (
+                  <p className="rag-summary-empty" style={{ padding: '40px 20px' }}>
+                    {searchTerm ? 'No projects match your search' : 'No projects with open escalations'}
+                  </p>
+                )}
+              </div>
+            </div>
+          ) : (
+            <ChartView 
+              data={filteredProjects}
+              metricKey="openEscalations"
+              metricLabel="escalations"
+              color="#dc2626"
+              onBarClick={setSelectedProject}
+            />
+          )}
         </div>
       </div>
       

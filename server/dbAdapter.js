@@ -31,6 +31,16 @@ class DatabaseAdapter {
   }
 
   async createProject(data) {
+    // Check for duplicate project name (case-insensitive)
+    if (data.name) {
+      const existingProject = await models.Project.findOne({ 
+        name: { $regex: new RegExp(`^${data.name}$`, 'i') } 
+      });
+      if (existingProject) {
+        throw new Error(`A project with the name "${data.name}" already exists`);
+      }
+    }
+
     // Generate unique project_id if not provided
     if (!data.project_id) {
       data.project_id = Date.now().toString();
@@ -40,6 +50,17 @@ class DatabaseAdapter {
   }
 
   async updateProject(id, data) {
+    // Check for duplicate project name when updating (case-insensitive, exclude current project)
+    if (data.name) {
+      const existingProject = await models.Project.findOne({ 
+        _id: { $ne: id },
+        name: { $regex: new RegExp(`^${data.name}$`, 'i') } 
+      });
+      if (existingProject) {
+        throw new Error(`A project with the name "${data.name}" already exists`);
+      }
+    }
+
     await models.Project.findByIdAndUpdate(id, data);
     return { changes: 1 };
   }
