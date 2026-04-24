@@ -121,8 +121,8 @@ router.get('/:id', async (req, res) => {
 // POST new project
 router.post('/', authenticate, requirePermission('projects', 'add_delete'), async (req, res) => {
   try {
-    const { name, priority, stage, summary, status, clients, links, owner, vertical, region, sponsor, anchor_customer } = req.body;
-    const result = await dbAdapter.createProject({ name, priority, stage, summary, status, clients, links, owner, vertical, region, sponsor, anchor_customer });
+    const { name, priority, stage, summary, status, clients, links, owner, vertical, region, sponsor, anchor_customer, spoc, actionItem, riskSummary, mitigationPlan, sowStatus } = req.body;
+    const result = await dbAdapter.createProject({ name, priority, stage, summary, status, clients, links, owner, vertical, region, sponsor, anchor_customer, spoc, actionItem, riskSummary, mitigationPlan, sowStatus });
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -132,8 +132,8 @@ router.post('/', authenticate, requirePermission('projects', 'add_delete'), asyn
 // PUT update project
 router.put('/:id', authenticate, requirePermission('projects', 'edit'), async (req, res) => {
   try {
-    const { name, priority, stage, summary, status, clients, links, owner, vertical, region, sponsor, anchor_customer } = req.body;
-    const result = await dbAdapter.updateProject(req.params.id, { name, priority, stage, summary, status, clients, links, owner, vertical, region, sponsor, anchor_customer });
+    const { name, priority, stage, summary, status, clients, links, owner, vertical, region, sponsor, anchor_customer, spoc, actionItem, riskSummary, mitigationPlan, sowStatus } = req.body;
+    const result = await dbAdapter.updateProject(req.params.id, { name, priority, stage, summary, status, clients, links, owner, vertical, region, sponsor, anchor_customer, spoc, actionItem, riskSummary, mitigationPlan, sowStatus });
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -11,7 +11,9 @@ const PortfolioHeader = ({ summaryHighlights, onHighlightClick }) => {
           onClick={() => onHighlightClick(item.type)}
         >
           <span className="exec-label">{item.label}</span>
-          <span className="exec-value">{item.value}</span>
+          <span className="exec-value">
+            {item.valueJSX || item.value}
+          </span>
           <span className="exec-helper">{item.helper}</span>
         </button>
       ))}

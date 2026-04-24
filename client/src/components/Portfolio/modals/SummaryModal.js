@@ -152,7 +152,7 @@ const SummaryModal = ({
           {/* RAG Summary */}
           {type === 'rag' && (
             <div className="rag-summary-modal">
-              {['green', 'amber', 'red'].map(status => (
+              {['red', 'amber', 'green'].map(status => (
                 <div key={`rag-summary-${status}`} className={`rag-summary-card rag-summary-${status}`}>
                   <button
                     type="button"

@@ -4,12 +4,6 @@ import './PortfolioMetrics.css';
 function PortfolioMetrics({ metrics, onMetricClick }) {
   if (!metrics) return null;
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  };
-
   const handleClick = (filterType) => {
     if (onMetricClick) onMetricClick(filterType);
   };
@@ -18,15 +12,6 @@ function PortfolioMetrics({ metrics, onMetricClick }) {
     <div className="portfolio-metrics">
       <div className="metrics-grid">
         {/* Row 1 */}
-        <div className="metric-card metric-card-red">
-          <div className="metric-value metric-large">
-            {metrics.plannedVsActualProgress >= 0 ? '+' : ''}{metrics.plannedVsActualProgress}%
-          </div>
-          <div className="metric-label">Planned vs Actual Progress</div>
-          <div className="metric-sublabel">Negative variance indicates behind schedule</div>
-        </div>
-
-        {/* Row 2 */}
         <div className="metric-card metric-card-default" onClick={() => handleClick('overdue')} style={{cursor: 'pointer'}}>
           <div className="metric-value">{metrics.overdueMilestonesTotal || 0}</div>
           <div className="metric-label">Overdue Milestones (Total)</div>

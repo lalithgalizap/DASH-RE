@@ -21,17 +21,12 @@
 
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 16px;
 }
 
-/* First row - 5 cards */
-.metrics-grid > *:nth-child(-n+5) {
-  grid-column: span 1;
-}
-
-/* Second row - remaining cards */
-.metrics-grid > *:nth-child(n+6) {
+/* All cards span 1 column */
+.metrics-grid > * {
   grid-column: span 1;
 }
 
@@ -117,13 +112,13 @@
 }
 
 /* Responsive */
-@media (max-width: 1400px) {
+@media (max-width: 1200px) {
   .metrics-grid {
     grid-template-columns: repeat(3, 1fr);
   }
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 900px) {
   .metrics-grid {
     grid-template-columns: repeat(2, 1fr);
   }

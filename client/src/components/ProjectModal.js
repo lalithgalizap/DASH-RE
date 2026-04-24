@@ -11,7 +11,8 @@ function ProjectModal({ project, onClose, onSave, isAdmin, canManageClients, can
     name: '',
     summary: '',
     status: 'Yet to Start',
-    clients: []
+    clients: [],
+    spoc: ''
   });
   const [allClients, setAllClients] = useState([]);
   const [showClientDropdown, setShowClientDropdown] = useState(false);
@@ -128,6 +129,17 @@ function ProjectModal({ project, onClose, onSave, isAdmin, canManageClients, can
               <option value="Completed">Completed</option>
               <option value="Cancelled">Cancelled</option>
             </select>
+          </div>
+
+          <div className="form-group">
+            <label>SPOC (Single Point of Contact)</label>
+            <input
+              type="text"
+              name="spoc"
+              value={formData.spoc}
+              onChange={handleChange}
+              placeholder="Enter SPOC name"
+            />
           </div>
 
           <div className="form-group">

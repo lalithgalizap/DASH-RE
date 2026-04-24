@@ -25,6 +25,11 @@ const projectSchema = new mongoose.Schema({
   region: String,
   sponsor: String,
   anchor_customer: String,
+  spoc: String,
+  actionItem: String,
+  riskSummary: String,
+  mitigationPlan: String,
+  sowStatus: String,
   created_at: Date,
   updated_at: Date
 }, {

@@ -248,6 +248,69 @@
   background-color: rgba(239, 68, 68, 0.1);
 }
 
+.export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background-color: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-right: 8px;
+}
+
+.export-btn:hover {
+  background-color: #e5e7eb;
+  color: #2563eb;
+}
+
+/* Tooltip styles for table cells */
+.tooltip-cell {
+  position: relative;
+}
+
+.ellipsis-text {
+  display: block;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tooltip-cell:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 0;
+  top: 100%;
+  z-index: 1000;
+  background-color: #1f2937;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: normal;
+  max-width: 300px;
+  word-wrap: break-word;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  margin-top: 4px;
+}
+
+.tooltip-cell:hover::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 100%;
+  z-index: 1001;
+  border: 6px solid transparent;
+  border-bottom-color: #1f2937;
+  margin-top: -8px;
+}
+
 .loading, .empty-state {
   padding: 60px 20px;
   text-align: center;

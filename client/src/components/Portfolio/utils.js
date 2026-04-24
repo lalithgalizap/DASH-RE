@@ -145,6 +145,26 @@ export const calculateProjectMetrics = (documents) => {
   const upcomingMilestoneDetails = [];
   const allMilestoneDetails = [];
 
+  // Planned vs Actual Progress calculation
+  // Count milestones that should be done by today (planned end date <= today)
+  const milestonesDueByToday = milestones.filter(m => {
+    if (!m['Planned End Date']) return false;
+    const endDate = convertExcelDateToJS(m['Planned End Date']);
+    if (!endDate) return false;
+    endDate.setHours(0, 0, 0, 0);
+    return endDate <= today;
+  });
+
+  const totalMilestonesDue = milestonesDueByToday.length;
+  const completedMilestonesDue = milestonesDueByToday.filter(m => 
+    m.Status && (m.Status.toLowerCase() === 'completed' || m.Status.toLowerCase() === 'complete')
+  ).length;
+
+  // Calculate percentages
+  const plannedProgress = totalMilestonesDue > 0 ? 100 : 0; // Should be 100% complete by today
+  const actualProgress = totalMilestonesDue > 0 ? Math.round((completedMilestonesDue / totalMilestonesDue) * 100) : 0;
+  const plannedVsActualProgress = actualProgress - plannedProgress; // Negative = behind schedule
+
   milestones.forEach(m => {
     if (!m['Planned End Date']) return;
     const endDate = convertExcelDateToJS(m['Planned End Date']);
@@ -213,6 +233,11 @@ export const calculateProjectMetrics = (documents) => {
   
   return {
     ragStatus,
+    plannedVsActualProgress,
+    plannedProgress,
+    actualProgress,
+    totalMilestonesDue,
+    completedMilestonesDue,
     overdueMilestones: overdueMilestoneDetails.length,
     overdueMilestoneDetails,
     upcomingMilestones: upcomingMilestoneDetails.length,
