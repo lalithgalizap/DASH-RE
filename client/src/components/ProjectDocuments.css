@@ -1,3 +1,6 @@
+@import '../styles/shared.css';
+@import '../styles/raid-common.css';
+
 .project-documents {
   margin-top: 30px;
 }
@@ -72,237 +75,65 @@
   font-size: 14px;
 }
 
-/* RAID Log Styles */
-.raid-log-container {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.raid-summary {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 16px;
-}
-
-.raid-stat {
-  background-color: #ffffff;
-  padding: 20px;
-  border-radius: 8px;
-  text-align: center;
-  border: 1px solid #d1d5db;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.raid-stat.risk {
-  border-left: 3px solid #ef4444;
-}
-
-.raid-stat.assumption {
-  border-left: 3px solid #3b82f6;
-}
-
-.raid-stat.issue {
-  border-left: 3px solid #f59e0b;
-}
-
-.raid-stat.dependency {
-  border-left: 3px solid #8b5cf6;
-}
-
-.stat-value {
-  font-size: 32px;
-  font-weight: 700;
-  color: #1f2937;
-  margin-bottom: 8px;
-}
-
-.stat-label {
-  font-size: 12px;
-  color: #6b7280;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.raid-table-container {
-  overflow-x: auto;
-}
-
-.raid-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-
-.raid-table thead {
-  background-color: #1f2937;
-}
-
-.raid-table th {
-  padding: 12px;
-  text-align: left;
-  font-weight: 600;
-  color: #d1d5db;
-  border-bottom: 2px solid #374151;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.raid-table td {
-  padding: 12px;
-  color: #1f2937;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.raid-table tbody tr:hover {
-  background-color: #f9fafb;
-}
-
-.raid-type {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
-.raid-type.risk {
-  background-color: rgba(239, 68, 68, 0.2);
-  color: #ef4444;
-}
-
-.raid-type.assumption {
-  background-color: rgba(59, 130, 246, 0.2);
-  color: #3b82f6;
-}
-
-.raid-type.issue {
-  background-color: rgba(245, 158, 11, 0.2);
-  color: #f59e0b;
-}
-
-.raid-type.dependency {
-  background-color: rgba(139, 92, 246, 0.2);
-  color: #8b5cf6;
-}
-
-.status-badge {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 500;
-}
-
-.status-badge.notstarted {
-  background-color: #e5e7eb;
-  color: #6b7280;
-}
-
-.status-badge.inprogress {
-  background-color: rgba(59, 130, 246, 0.2);
-  color: #3b82f6;
-}
-
-.status-badge.behind {
-  background-color: rgba(239, 68, 68, 0.2);
-  color: #ef4444;
-}
-
-.status-badge.complete {
-  background-color: rgba(34, 197, 94, 0.2);
-  color: #22c55e;
-}
-
-.severity {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.severity.critical {
-  background-color: rgba(239, 68, 68, 0.2);
-  color: #ef4444;
-}
-
-.severity.high {
-  background-color: rgba(245, 158, 11, 0.2);
-  color: #f59e0b;
-}
-
-.severity.medium {
-  background-color: rgba(234, 179, 8, 0.2);
-  color: #eab308;
-}
-
-.severity.low {
-  background-color: rgba(34, 197, 94, 0.2);
-  color: #22c55e;
-}
-
-/* RAID Insights */
+/* RAID Insights - Additional styles beyond raid-common.css */
 .raid-insights-container {
-  margin-bottom: 30px;
+  margin-bottom: var(--space-6);
 }
 
 .raid-insights-container h3 {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1f2937;
-  margin-bottom: 16px;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-semibold);
+  color: var(--color-gray-800);
+  margin-bottom: var(--space-4);
 }
 
 .insights-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .insight-card {
-  background-color: #ffffff;
-  padding: 20px;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
+  background-color: white;
+  padding: var(--space-5);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-gray-200);
   text-align: center;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
 }
 
 .insight-value {
   font-size: 28px;
-  font-weight: 700;
-  color: #3b82f6;
-  margin-bottom: 8px;
+  font-weight: var(--font-bold);
+  color: var(--color-primary-500);
+  margin-bottom: var(--space-2);
 }
 
 .insight-label {
-  font-size: 12px;
-  color: #6b7280;
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-500);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .risk-matrix {
-  margin-top: 30px;
-  padding-top: 30px;
-  border-top: 1px solid #e5e7eb;
+  margin-top: var(--space-6);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--color-gray-200);
 }
 
 .risk-matrix h3 {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1f2937;
-  margin-bottom: 16px;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-semibold);
+  color: var(--color-gray-800);
+  margin-bottom: var(--space-4);
 }
 
 /* Toggle Button Styles */
 .raid-header-controls {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--space-5);
 }
 
 .view-toggle {

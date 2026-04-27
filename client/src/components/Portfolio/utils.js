@@ -212,6 +212,13 @@ export const calculateProjectMetrics = (documents) => {
     return isEscalate && isNotClosed;
   });
 
+  // Open dependencies: Type = "Dependency" and not closed/resolved
+  const openDependenciesDetails = raidLog.filter(r => {
+    const isDependency = r.Type && r.Type.toLowerCase() === 'dependency';
+    const isOpen = r.Status && r.Status.toLowerCase() !== 'closed' && r.Status.toLowerCase() !== 'resolved';
+    return isDependency && isOpen;
+  });
+
   // Use Excel ragStatus from Project Cover Sheet if available, otherwise calculate
   const excelRagStatus = documents.ragStatus;
   const validRagValues = ['red', 'amber', 'green'];
@@ -250,6 +257,8 @@ export const calculateProjectMetrics = (documents) => {
     openCriticalIssuesDetails,
     openEscalations: openEscalationsDetails.length,
     openEscalationsDetails,
+    openDependencies: openDependenciesDetails.length,
+    openDependenciesDetails,
     projectCharter: documents.projectCharter,
     projectCompletion,
     totalTasks,

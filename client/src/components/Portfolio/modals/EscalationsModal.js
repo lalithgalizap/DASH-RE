@@ -1,13 +1,37 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { getRAGColor, getProjectOwner, isActiveStatus } from '../utils';
 import EscalationDetailModal from './EscalationDetailModal';
+import WeekDetailModal from './WeekDetailModal';
 import ViewToggle from './ViewToggle';
 import ChartView from './ChartView';
+import './modals.css';
+import axios from 'axios';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  LabelList
+} from 'recharts';
 
-const EscalationsModal = ({ isOpen, onClose, projects }) => {
+// Color palette for projects
+const PROJECT_COLORS = [
+  '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+  '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1'
+];
+
+const EscalationsModal = ({ isOpen, onClose, projects, selectedClient }) => {
   const [selectedProject, setSelectedProject] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState('list'); // 'list' | 'chart'
+  const [viewMode, setViewMode] = useState('list'); // 'list' | 'chart' | 'history'
+  const [historyData, setHistoryData] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState(null);
+  const [allProjectNames, setAllProjectNames] = useState([]);
+  const [selectedWeekData, setSelectedWeekData] = useState(null);
 
   // Filter out completed/cancelled projects
   const activeProjects = (projects || []).filter(p => isActiveStatus(p.status));
@@ -22,6 +46,119 @@ const EscalationsModal = ({ isOpen, onClose, projects }) => {
       (getProjectOwner(p)?.toLowerCase() || '').includes(term)
     );
   }, [projectsWithEscalations, searchTerm]);
+
+  // Fetch history data when viewMode is 'history'
+  useEffect(() => {
+    if (viewMode !== 'history' || !isOpen) return;
+
+    const fetchHistory = async () => {
+      setHistoryLoading(true);
+      setHistoryError(null);
+      try {
+        const token = localStorage.getItem('token');
+        const clientParam = selectedClient && selectedClient !== 'All' ? `&client=${encodeURIComponent(selectedClient)}` : '';
+        const response = await axios.get(
+          `/api/metrics/history?metric=openEscalationsTotal&weeks=5${clientParam}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        setAllProjectNames(response.data.allProjectNames || []);
+
+        const rawData = response.data.data || [];
+        const transformedData = rawData.map(week => {
+          const weekData = {
+            weekEnding: week.weekEnding,
+            formattedDate: formatDate(week.weekEnding),
+            total: week.value,
+            projects: week.projects || []
+          };
+          (week.projects || []).forEach(p => {
+            weekData[p.projectName] = p.value;
+          });
+          return weekData;
+        });
+
+        setHistoryData(transformedData);
+      } catch (err) {
+        console.error('Error fetching history:', err);
+        setHistoryError('Failed to load history data');
+      } finally {
+        setHistoryLoading(false);
+      }
+    };
+
+    fetchHistory();
+  }, [viewMode, isOpen, selectedClient]);
+
+  // Format date for display
+  const formatDate = (dateStr) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
+  // Custom tooltip for history chart with project breakdown
+  const HistoryTooltip = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      const projects = data.projects || [];
+
+      return (
+        <div style={{
+          backgroundColor: 'white',
+          padding: '12px',
+          border: '1px solid #e5e7eb',
+          borderRadius: '8px',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+          maxWidth: '320px',
+          maxHeight: '400px',
+          overflow: 'auto'
+        }}>
+          <p style={{ margin: '0 0 8px 0', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb', paddingBottom: '8px' }}>
+            Week ending: {formatDate(data.weekEnding)}
+          </p>
+          <p style={{ margin: '0 0 8px 0', color: '#dc2626', fontWeight: 600 }}>
+            Total Escalations: {data.value}
+          </p>
+          <p style={{ margin: '0 0 12px 0', color: '#6b7280', fontSize: '13px' }}>
+            Active Projects: {data.projectCount} | Total: {data.totalProjects}
+          </p>
+
+          {projects.length > 0 && (
+            <>
+              <p style={{ margin: '0 0 6px 0', fontWeight: 600, color: '#374151', fontSize: '13px' }}>
+                By Project:
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {projects.slice(0, 8).map((project, idx) => (
+                  <div key={idx} style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    fontSize: '12px',
+                    padding: '3px 0',
+                    borderBottom: idx < projects.length - 1 && idx < 7 ? '1px solid #f3f4f6' : 'none'
+                  }}>
+                    <span style={{ color: '#4b5563', maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {project.projectName}
+                    </span>
+                    <span style={{ color: '#dc2626', fontWeight: 600, marginLeft: '12px' }}>
+                      {project.value}
+                    </span>
+                  </div>
+                ))}
+                {projects.length > 8 && (
+                  <p style={{ margin: '4px 0 0 0', color: '#9ca3af', fontSize: '11px', fontStyle: 'italic', textAlign: 'center' }}>
+                    + {projects.length - 8} more projects
+                  </p>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      );
+    }
+    return null;
+  };
 
   if (!isOpen) return null;
 
@@ -70,7 +207,7 @@ const EscalationsModal = ({ isOpen, onClose, projects }) => {
             marginBottom: '16px',
             gap: '12px'
           }}>
-            <ViewToggle view={viewMode} onChange={setViewMode} />
+            <ViewToggle view={viewMode} onChange={setViewMode} showHistory={true} />
             
             {viewMode === 'list' && projectsWithEscalations.length > 4 && (
               <div style={{ position: 'relative', flex: 1, maxWidth: '300px' }}>
@@ -122,7 +259,95 @@ const EscalationsModal = ({ isOpen, onClose, projects }) => {
           )}
 
           {/* Content Area */}
-          {viewMode === 'list' ? (
+          {viewMode === 'history' ? (
+            <div style={{ height: '350px' }}>
+              {historyLoading && (
+                <div style={{ textAlign: 'center', padding: '80px' }}>
+                  <div className="loading-spinner" />
+                  <p style={{ marginTop: '16px', color: '#6b7280' }}>Loading history...</p>
+                </div>
+              )}
+              {historyError && (
+                <div style={{ textAlign: 'center', padding: '80px', color: '#dc2626' }}>
+                  {historyError}
+                </div>
+              )}
+              {!historyLoading && !historyError && historyData.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '80px', color: '#6b7280' }}>
+                  <p>No history data available yet.</p>
+                  <p style={{ fontSize: '14px', marginTop: '8px' }}>
+                    Data will be collected weekly starting from the next Friday at 6 PM CST.
+                  </p>
+                </div>
+              )}
+              {!historyLoading && !historyError && historyData.length > 0 && allProjectNames.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '80px', color: '#6b7280' }}>
+                  <p>No data for selected client.</p>
+                  <p style={{ fontSize: '14px', marginTop: '8px' }}>
+                    Try selecting a different client or "All" to see all projects.
+                  </p>
+                </div>
+              )}
+              {!historyLoading && !historyError && historyData.length > 0 && allProjectNames.length > 0 && (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={historyData}
+                    margin={{ top: 30, right: 30, left: 20, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis
+                      dataKey="formattedDate"
+                      tick={{ fontSize: 12, fill: '#6b7280' }}
+                      axisLine={{ stroke: '#e5e7eb' }}
+                      tickLine={{ stroke: '#e5e7eb' }}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 12, fill: '#6b7280' }}
+                      axisLine={{ stroke: '#e5e7eb' }}
+                      tickLine={{ stroke: '#e5e7eb' }}
+                      allowDecimals={false}
+                    />
+                    <Tooltip content={<HistoryTooltip />} />
+                    {/* Render a Bar for each project - stacked */}
+                    {allProjectNames.map((projectName, idx) => (
+                      <Bar
+                        key={projectName}
+                        dataKey={projectName}
+                        stackId="total"
+                        fill={PROJECT_COLORS[idx % PROJECT_COLORS.length]}
+                        radius={idx === allProjectNames.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
+                        maxBarSize={60}
+                        onClick={(data) => setSelectedWeekData(data.payload)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <LabelList
+                          dataKey={projectName}
+                          position="inside"
+                          content={(props) => {
+                            const { value, x, y, width, height } = props;
+                            if (!value || value === 0 || height < 20) return null;
+                            return (
+                              <text
+                                x={x + width / 2}
+                                y={y + height / 2}
+                                fill="white"
+                                textAnchor="middle"
+                                dominantBaseline="middle"
+                                fontSize="10"
+                                fontWeight="600"
+                              >
+                                {projectName.length > 8 ? projectName.substring(0, 6) + '..' : projectName}
+                              </text>
+                            );
+                          }}
+                        />
+                      </Bar>
+                    ))}
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          ) : viewMode === 'list' ? (
             <div style={{ 
               maxHeight: '350px', 
               overflowY: 'auto'
@@ -178,9 +403,20 @@ const EscalationsModal = ({ isOpen, onClose, projects }) => {
       
       {/* Escalation Detail Modal */}
       {selectedProject && (
-        <EscalationDetailModal 
-          project={selectedProject} 
-          onClose={() => setSelectedProject(null)} 
+        <EscalationDetailModal
+          project={selectedProject}
+          onClose={() => setSelectedProject(null)}
+        />
+      )}
+
+      {/* Week Detail Modal */}
+      {selectedWeekData && (
+        <WeekDetailModal
+          isOpen={!!selectedWeekData}
+          onClose={() => setSelectedWeekData(null)}
+          weekData={selectedWeekData}
+          metricLabel="Escalations"
+          color="#dc2626"
         />
       )}
     </div>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { getRAGColor, getProjectOwner, isActiveStatus, formatDate } from '../utils';
 import CriticalItemsDetailModal from './CriticalItemsDetailModal';
+import './modals.css';
 
 const SummaryModal = ({ 
   type, 

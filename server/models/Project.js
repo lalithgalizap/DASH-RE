@@ -30,6 +30,7 @@ const projectSchema = new mongoose.Schema({
   riskSummary: String,
   mitigationPlan: String,
   sowStatus: String,
+  dashboardUpdatedAt: Date,
   created_at: Date,
   updated_at: Date
 }, {

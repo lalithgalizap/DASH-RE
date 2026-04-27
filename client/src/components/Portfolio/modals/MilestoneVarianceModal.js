@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Calendar, CheckCircle, Clock, AlertTriangle, TrendingUp, X } from 'lucide-react';
+import './modals.css';
 
 function MilestoneVarianceModal({ isOpen, onClose, projects }) {
   const [searchQuery, setSearchQuery] = useState('');

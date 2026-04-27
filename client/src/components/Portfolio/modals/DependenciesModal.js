@@ -1,10 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { getRAGColor, getProjectOwner, isActiveStatus } from '../utils';
-import MilestoneDetailModal from './MilestoneDetailModal';
+import DependencyDetailModal from './DependencyDetailModal';
 import WeekDetailModal from './WeekDetailModal';
-import './modals.css';
 import ViewToggle from './ViewToggle';
 import ChartView from './ChartView';
+import './modals.css';
 import axios from 'axios';
 import {
   BarChart,
@@ -14,7 +14,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Cell,
   LabelList
 } from 'recharts';
 
@@ -24,7 +23,7 @@ const PROJECT_COLORS = [
   '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1'
 ];
 
-const OverdueMilestonesModal = ({ isOpen, onClose, projects, selectedClient }) => {
+const DependenciesModal = ({ isOpen, onClose, projects, selectedClient }) => {
   const [selectedProject, setSelectedProject] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'chart' | 'history'
@@ -36,17 +35,17 @@ const OverdueMilestonesModal = ({ isOpen, onClose, projects, selectedClient }) =
 
   // Filter out completed/cancelled projects
   const activeProjects = (projects || []).filter(p => isActiveStatus(p.status));
-  const projectsWithOverdue = activeProjects.filter(p => (p.overdueMilestones || 0) > 0);
+  const projectsWithDependencies = activeProjects.filter(p => (p.openDependencies || 0) > 0);
 
   // Filter projects based on search term
   const filteredProjects = useMemo(() => {
-    if (!searchTerm.trim()) return projectsWithOverdue;
+    if (!searchTerm.trim()) return projectsWithDependencies;
     const term = searchTerm.toLowerCase();
-    return projectsWithOverdue.filter(p => 
+    return projectsWithDependencies.filter(p =>
       (p.name?.toLowerCase() || '').includes(term) ||
       (getProjectOwner(p)?.toLowerCase() || '').includes(term)
     );
-  }, [projectsWithOverdue, searchTerm]);
+  }, [projectsWithDependencies, searchTerm]);
 
   // Fetch history data when viewMode is 'history'
   useEffect(() => {
@@ -59,14 +58,12 @@ const OverdueMilestonesModal = ({ isOpen, onClose, projects, selectedClient }) =
         const token = localStorage.getItem('token');
         const clientParam = selectedClient && selectedClient !== 'All' ? `&client=${encodeURIComponent(selectedClient)}` : '';
         const response = await axios.get(
-          `/api/metrics/history?metric=overdueMilestonesTotal&weeks=5${clientParam}`,
+          `/api/metrics/history?metric=openDependenciesTotal&weeks=5${clientParam}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
-        // Store project names for color assignment
         setAllProjectNames(response.data.allProjectNames || []);
 
-        // Transform data for stacked bar chart
         const rawData = response.data.data || [];
         const transformedData = rawData.map(week => {
           const weekData = {
@@ -75,12 +72,9 @@ const OverdueMilestonesModal = ({ isOpen, onClose, projects, selectedClient }) =
             total: week.value,
             projects: week.projects || []
           };
-
-          // Add each project as a separate key for stacked bar
           (week.projects || []).forEach(p => {
             weekData[p.projectName] = p.value;
           });
-
           return weekData;
         });
 
@@ -123,7 +117,7 @@ const OverdueMilestonesModal = ({ isOpen, onClose, projects, selectedClient }) =
             Week ending: {formatDate(data.weekEnding)}
           </p>
           <p style={{ margin: '0 0 8px 0', color: '#dc2626', fontWeight: 600 }}>
-            Total Overdue: {data.value}
+            Total Dependencies: {data.value}
           </p>
           <p style={{ margin: '0 0 12px 0', color: '#6b7280', fontSize: '13px' }}>
             Active Projects: {data.projectCount} | Total: {data.totalProjects}
@@ -169,64 +163,64 @@ const OverdueMilestonesModal = ({ isOpen, onClose, projects, selectedClient }) =
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" onClick={onClose} style={{ 
-      position: 'fixed', 
-      top: 0, 
-      left: 0, 
-      right: 0, 
-      bottom: 0, 
-      backgroundColor: 'rgba(0,0,0,0.5)', 
-      display: 'flex', 
-      alignItems: 'center', 
-      justifyContent: 'center', 
-      zIndex: 1000 
+    <div className="modal-overlay" onClick={onClose} style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000
     }}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ 
-        backgroundColor: 'white', 
-        borderRadius: '8px', 
-        maxWidth: '800px', 
-        maxHeight: '80vh', 
-        overflow: 'auto', 
-        width: '90%' 
+      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{
+        backgroundColor: 'white',
+        borderRadius: '8px',
+        maxWidth: '800px',
+        maxHeight: '80vh',
+        overflow: 'auto',
+        width: '90%'
       }}>
-        <div className="modal-header" style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          padding: '20px', 
-          borderBottom: '1px solid #e5e7eb' 
+        <div className="modal-header" style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '20px',
+          borderBottom: '1px solid #e5e7eb'
         }}>
-          <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600' }}>Projects with Overdue Milestones</h2>
-          <button onClick={onClose} style={{ 
-            background: 'none', 
-            border: 'none', 
-            fontSize: '24px', 
-            cursor: 'pointer' 
+          <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600' }}>Projects with Open Dependencies</h2>
+          <button onClick={onClose} style={{
+            background: 'none',
+            border: 'none',
+            fontSize: '24px',
+            cursor: 'pointer'
           }}>×</button>
         </div>
         <div className="modal-body" style={{ padding: '20px' }}>
           {/* View Toggle + Search */}
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
             alignItems: 'center',
             marginBottom: '16px',
             gap: '12px'
           }}>
             <ViewToggle view={viewMode} onChange={setViewMode} showHistory={true} />
-            
-            {viewMode === 'list' && projectsWithOverdue.length > 4 && (
+
+            {viewMode === 'list' && projectsWithDependencies.length > 4 && (
               <div style={{ position: 'relative', flex: 1, maxWidth: '300px' }}>
-                <svg 
-                  width="18" 
-                  height="18" 
-                  viewBox="0 0 24 24" 
-                  fill="none" 
-                  stroke="currentColor" 
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
                   strokeWidth="2"
-                  style={{ 
-                    position: 'absolute', 
-                    left: '12px', 
+                  style={{
+                    position: 'absolute',
+                    left: '12px',
                     top: '50%',
                     transform: 'translateY(-50%)',
                     color: '#9ca3af',
@@ -253,14 +247,14 @@ const OverdueMilestonesModal = ({ isOpen, onClose, projects, selectedClient }) =
               </div>
             )}
           </div>
-          
+
           {viewMode === 'list' && searchTerm && (
-            <div style={{ 
-              marginBottom: '12px', 
-              fontSize: '12px', 
+            <div style={{
+              marginBottom: '12px',
+              fontSize: '12px',
               color: '#6b7280'
             }}>
-              Showing {filteredProjects.length} of {projectsWithOverdue.length} projects
+              Showing {filteredProjects.length} of {projectsWithDependencies.length} projects
             </div>
           )}
 
@@ -354,16 +348,16 @@ const OverdueMilestonesModal = ({ isOpen, onClose, projects, selectedClient }) =
               )}
             </div>
           ) : viewMode === 'list' ? (
-            <div style={{ 
-              maxHeight: '350px', 
+            <div style={{
+              maxHeight: '350px',
               overflowY: 'auto'
             }}>
               <div className="critical-accordion" style={{ border: 'none' }}>
                 {filteredProjects.length > 0 ? (
                   filteredProjects
-                    .sort((a, b) => (b.overdueMilestones || 0) - (a.overdueMilestones || 0))
+                    .sort((a, b) => (b.openDependencies || 0) - (a.openDependencies || 0))
                     .map(project => (
-                      <div key={`overdue-${project.id || project._id}`} className="critical-project">
+                      <div key={`dependencies-${project.id || project._id}`} className="critical-project">
                         <button
                           type="button"
                           className="critical-project-header"
@@ -375,12 +369,12 @@ const OverdueMilestonesModal = ({ isOpen, onClose, projects, selectedClient }) =
                             <div className="critical-meta">
                               <span>{getProjectOwner(project)}</span>
                               <span>•</span>
-                              <span>{project.overdueMilestones} overdue</span>
+                              <span>{project.openDependencies} dependencies</span>
                             </div>
                           </div>
                           <div className="critical-project-right">
-                            <span style={{ color: '#ef4444', fontWeight: '600', fontSize: '13px', marginRight: '12px' }}>
-                              {project.overdueMilestones} overdue
+                            <span style={{ color: '#dc2626', fontWeight: '600', fontSize: '13px', marginRight: '12px' }}>
+                              {project.openDependencies} dependencies
                             </span>
                             <span className="critical-status-dot" style={{ backgroundColor: getRAGColor(project.ragStatus) }}></span>
                             <span className="critical-chevron">⌄</span>
@@ -390,29 +384,28 @@ const OverdueMilestonesModal = ({ isOpen, onClose, projects, selectedClient }) =
                     ))
                 ) : (
                   <p className="rag-summary-empty" style={{ padding: '40px 20px' }}>
-                    {searchTerm ? 'No projects match your search' : 'No projects with overdue milestones'}
+                    {searchTerm ? 'No projects match your search' : 'No projects with open dependencies'}
                   </p>
                 )}
               </div>
             </div>
           ) : (
-            <ChartView 
+            <ChartView
               data={filteredProjects}
-              metricKey="overdueMilestones"
-              metricLabel="overdue milestones"
-              color="#ef4444"
+              metricKey="openDependencies"
+              metricLabel="dependencies"
+              color="#dc2626"
               onBarClick={setSelectedProject}
             />
           )}
         </div>
       </div>
-      
-      {/* Milestone Detail Modal */}
+
+      {/* Dependency Detail Modal */}
       {selectedProject && (
-        <MilestoneDetailModal
+        <DependencyDetailModal
           project={selectedProject}
           onClose={() => setSelectedProject(null)}
-          type="overdue"
         />
       )}
 
@@ -422,7 +415,7 @@ const OverdueMilestonesModal = ({ isOpen, onClose, projects, selectedClient }) =
           isOpen={!!selectedWeekData}
           onClose={() => setSelectedWeekData(null)}
           weekData={selectedWeekData}
-          metricLabel="Overdue Milestones"
+          metricLabel="Dependencies"
           color="#dc2626"
         />
       )}
@@ -430,4 +423,4 @@ const OverdueMilestonesModal = ({ isOpen, onClose, projects, selectedClient }) =
   );
 };
 
-export default OverdueMilestonesModal;
+export default DependenciesModal;

@@ -16,6 +16,7 @@ import {
   CriticalRisksModal,
   CriticalIssuesModal,
   EscalationsModal,
+  DependenciesModal,
   ProjectRadialView,
   SummaryModal,
   RAGCategoryModal,
@@ -33,6 +34,7 @@ function PortfolioContent() {
   const [showOpenCriticalRisksModal, setShowOpenCriticalRisksModal] = useState(false);
   const [showOpenCriticalIssuesModal, setShowOpenCriticalIssuesModal] = useState(false);
   const [showOpenEscalationsModal, setShowOpenEscalationsModal] = useState(false);
+  const [showOpenDependenciesModal, setShowOpenDependenciesModal] = useState(false);
   const [showMilestoneVarianceModal, setShowMilestoneVarianceModal] = useState(false);
   const [radialViewProject, setRadialViewProject] = useState(null);
   const [summaryModal, setSummaryModal] = useState(null);
@@ -465,7 +467,8 @@ function PortfolioContent() {
             upcomingMilestonesTotal: clientFilteredProjects.reduce((sum, p) => sum + (p.upcomingMilestones || 0), 0),
             openCriticalRisksTotal: clientFilteredProjects.reduce((sum, p) => sum + (p.openCriticalRisks || 0), 0),
             openCriticalIssuesTotal: clientFilteredProjects.reduce((sum, p) => sum + (p.openCriticalIssues || 0), 0),
-            openEscalationsTotal: clientFilteredProjects.reduce((sum, p) => sum + (p.openEscalations || 0), 0)
+            openEscalationsTotal: clientFilteredProjects.reduce((sum, p) => sum + (p.openEscalations || 0), 0),
+            openDependenciesTotal: clientFilteredProjects.reduce((sum, p) => sum + (p.openDependencies || 0), 0)
           }} 
           onMetricClick={(type) => {
             if (type === 'rag') setShowRAGProjectsModal(true);
@@ -475,6 +478,7 @@ function PortfolioContent() {
             if (type === 'criticalRisks') setShowOpenCriticalRisksModal(true);
             if (type === 'criticalIssues') setShowOpenCriticalIssuesModal(true);
             if (type === 'escalations') setShowOpenEscalationsModal(true);
+            if (type === 'dependencies') setShowOpenDependenciesModal(true);
           }}
         />
 
@@ -667,38 +671,51 @@ function PortfolioContent() {
       />
 
       {/* Overdue Milestones Modal */}
-      <OverdueMilestonesModal 
-        isOpen={showOverdueMilestonesModal} 
-        onClose={() => setShowOverdueMilestonesModal(false)} 
+      <OverdueMilestonesModal
+        isOpen={showOverdueMilestonesModal}
+        onClose={() => setShowOverdueMilestonesModal(false)}
         projects={clientFilteredProjects}
+        selectedClient={selectedClient}
       />
 
       {/* Upcoming Milestones Modal */}
-      <UpcomingMilestonesModal 
-        isOpen={showUpcomingMilestonesModal} 
-        onClose={() => setShowUpcomingMilestonesModal(false)} 
+      <UpcomingMilestonesModal
+        isOpen={showUpcomingMilestonesModal}
+        onClose={() => setShowUpcomingMilestonesModal(false)}
         projects={clientFilteredProjects}
+        selectedClient={selectedClient}
       />
 
       {/* Open Critical Risks Modal */}
-      <CriticalRisksModal 
-        isOpen={showOpenCriticalRisksModal} 
-        onClose={() => setShowOpenCriticalRisksModal(false)} 
+      <CriticalRisksModal
+        isOpen={showOpenCriticalRisksModal}
+        onClose={() => setShowOpenCriticalRisksModal(false)}
         projects={clientFilteredProjects}
+        selectedClient={selectedClient}
       />
 
       {/* Open Critical Issues Modal */}
-      <CriticalIssuesModal 
-        isOpen={showOpenCriticalIssuesModal} 
-        onClose={() => setShowOpenCriticalIssuesModal(false)} 
+      <CriticalIssuesModal
+        isOpen={showOpenCriticalIssuesModal}
+        onClose={() => setShowOpenCriticalIssuesModal(false)}
         projects={clientFilteredProjects}
+        selectedClient={selectedClient}
       />
 
       {/* Open Escalations Modal */}
-      <EscalationsModal 
-        isOpen={showOpenEscalationsModal} 
-        onClose={() => setShowOpenEscalationsModal(false)} 
+      <EscalationsModal
+        isOpen={showOpenEscalationsModal}
+        onClose={() => setShowOpenEscalationsModal(false)}
         projects={clientFilteredProjects}
+        selectedClient={selectedClient}
+      />
+
+      {/* Open Dependencies Modal */}
+      <DependenciesModal
+        isOpen={showOpenDependenciesModal}
+        onClose={() => setShowOpenDependenciesModal(false)}
+        projects={clientFilteredProjects}
+        selectedClient={selectedClient}
       />
 
       {/* Milestone Variance Modal */}
@@ -707,6 +724,7 @@ function PortfolioContent() {
         onClose={() => setShowMilestoneVarianceModal(false)} 
         projects={clientFilteredProjects}
       />
+
       </div>
     </div>
   );

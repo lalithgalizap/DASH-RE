@@ -30,6 +30,12 @@ function PortfolioMetrics({ metrics, onMetricClick }) {
           <div className="metric-sublabel">Critical / High only</div>
         </div>
 
+        <div className="metric-card metric-card-red" onClick={() => handleClick('dependencies')} style={{cursor: 'pointer'}}>
+          <div className="metric-value">{metrics.openDependenciesTotal || 0}</div>
+          <div className="metric-label">Open Dependencies</div>
+          <div className="metric-sublabel">External/blocking dependencies</div>
+        </div>
+
         <div className="metric-card metric-card-red" onClick={() => handleClick('criticalIssues')} style={{cursor: 'pointer'}}>
           <div className="metric-value">{metrics.openCriticalIssuesTotal || 0}</div>
           <div className="metric-label">Open Critical Issues</div>

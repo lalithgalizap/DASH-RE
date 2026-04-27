@@ -1,5 +1,6 @@
 import React from 'react';
 import { getRAGColor, isActiveStatus } from '../utils';
+import './modals.css';
 
 const RAGProjectsModal = ({ isOpen, onClose, projects }) => {
   if (!isOpen) return null;

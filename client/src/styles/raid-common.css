@@ -1,0 +1,197 @@
+/* ==========================================================================
+   RAID Common CSS - Shared RAID-specific styles
+   Phase 2: Extract RAID styles for reuse across components
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   RAID Log Container
+   -------------------------------------------------------------------------- */
+.raid-log-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* --------------------------------------------------------------------------
+   RAID Summary Stats
+   -------------------------------------------------------------------------- */
+.raid-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-4);
+}
+
+.raid-stat {
+  background-color: white;
+  padding: var(--space-5);
+  border-radius: var(--radius-md);
+  text-align: center;
+  border: 1px solid var(--color-gray-300);
+  box-shadow: var(--shadow-md);
+}
+
+.raid-stat.risk {
+  border-left: 3px solid var(--color-danger);
+}
+
+.raid-stat.assumption {
+  border-left: 3px solid var(--color-info);
+}
+
+.raid-stat.issue {
+  border-left: 3px solid var(--color-warning);
+}
+
+.raid-stat.dependency {
+  border-left: 3px solid #8b5cf6;
+}
+
+/* --------------------------------------------------------------------------
+   RAID Table
+   -------------------------------------------------------------------------- */
+.raid-table-container {
+  overflow-x: auto;
+}
+
+.raid-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-md);
+}
+
+.raid-table thead {
+  background-color: var(--color-gray-800);
+}
+
+.raid-table th {
+  padding: var(--space-3);
+  text-align: left;
+  font-weight: var(--font-semibold);
+  color: var(--color-gray-300);
+  border-bottom: 2px solid var(--color-gray-700);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.raid-table td {
+  padding: var(--space-3);
+  color: var(--color-gray-800);
+  border-bottom: 1px solid var(--color-gray-200);
+}
+
+.raid-table tbody tr:hover {
+  background-color: var(--color-gray-50);
+}
+
+/* --------------------------------------------------------------------------
+   RAID Type Badges
+   -------------------------------------------------------------------------- */
+.raid-type {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) 10px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.raid-type.risk {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: var(--color-danger);
+}
+
+.raid-type.assumption {
+  background-color: rgba(59, 130, 246, 0.2);
+  color: var(--color-info);
+}
+
+.raid-type.issue {
+  background-color: rgba(245, 158, 11, 0.2);
+  color: var(--color-warning);
+}
+
+.raid-type.dependency {
+  background-color: rgba(139, 92, 246, 0.2);
+  color: #8b5cf6;
+}
+
+/* --------------------------------------------------------------------------
+   Status Badges for RAID
+   -------------------------------------------------------------------------- */
+.raid-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) 10px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-medium);
+}
+
+.raid-status-badge.notstarted {
+  background-color: var(--color-gray-200);
+  color: var(--color-gray-500);
+}
+
+.raid-status-badge.inprogress {
+  background-color: rgba(59, 130, 246, 0.2);
+  color: var(--color-info);
+}
+
+.raid-status-badge.behind {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: var(--color-danger);
+}
+
+.raid-status-badge.complete {
+  background-color: rgba(16, 185, 129, 0.2);
+  color: var(--color-success);
+}
+
+/* --------------------------------------------------------------------------
+   Severity Badges
+   -------------------------------------------------------------------------- */
+.severity-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) 10px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-semibold);
+}
+
+.severity-badge.critical {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: var(--color-danger);
+}
+
+.severity-badge.high {
+  background-color: rgba(245, 158, 11, 0.2);
+  color: var(--color-warning);
+}
+
+.severity-badge.medium {
+  background-color: rgba(234, 179, 8, 0.2);
+  color: #eab308;
+}
+
+.severity-badge.low {
+  background-color: rgba(16, 185, 129, 0.2);
+  color: var(--color-success);
+}
+
+/* --------------------------------------------------------------------------
+   RAID Insights
+   -------------------------------------------------------------------------- */
+.raid-insights-container {
+  margin-bottom: var(--space-6);
+}
+
+.raid-insights-container h3 {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-semibold);
+  color: var(--color-gray-800);
+  margin-bottom: var(--space-4);
+}

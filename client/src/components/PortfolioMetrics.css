@@ -21,8 +21,8 @@
 
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 16px;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
 }
 
 /* All cards span 1 column */
@@ -33,12 +33,12 @@
 .metric-card {
   background: white;
   border-radius: 12px;
-  padding: 16px;
+  padding: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   border: 1px solid #e5e7eb;
   display: flex;
   flex-direction: column;
-  min-height: 100px;
+  min-height: 90px;
 }
 
 .metric-card-blue {
@@ -67,10 +67,10 @@
 }
 
 .metric-value {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 700;
   color: #1f2937;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   line-height: 1;
 }
 
@@ -79,17 +79,17 @@
 }
 
 .metric-label {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: #374151;
-  margin-bottom: 4px;
-  line-height: 1.3;
+  margin-bottom: 2px;
+  line-height: 1.2;
 }
 
 .metric-sublabel {
-  font-size: 11px;
+  font-size: 10px;
   color: #6b7280;
-  line-height: 1.3;
+  line-height: 1.2;
 }
 
 /* RAG Status Colors */
@@ -115,6 +115,13 @@
 @media (max-width: 1200px) {
   .metrics-grid {
     grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .metric-value {
+    font-size: 22px;
+  }
+  .metric-label {
+    font-size: 10px;
   }
 }
 

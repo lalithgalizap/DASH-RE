@@ -26,7 +26,8 @@ export const PortfolioProvider = ({ children }) => {
     upcomingMilestonesTotal: 0,
     openCriticalRisksTotal: 0,
     openCriticalIssuesTotal: 0,
-    openEscalationsTotal: 0
+    openEscalationsTotal: 0,
+    openDependenciesTotal: 0
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -48,6 +49,8 @@ export const PortfolioProvider = ({ children }) => {
     openCriticalIssuesDetails: [],
     openEscalations: 0,
     openEscalationsDetails: [],
+    openDependencies: 0,
+    openDependenciesDetails: [],
     projectCompletion: 0,
     totalTasks: 0,
     completedTasks: 0,
@@ -205,6 +208,7 @@ export const PortfolioProvider = ({ children }) => {
       const openCriticalRisksTotal = activeEligibleProjects.reduce((sum, p) => sum + (p.openCriticalRisks || 0), 0);
       const openCriticalIssuesTotal = activeEligibleProjects.reduce((sum, p) => sum + (p.openCriticalIssues || 0), 0);
       const openEscalationsTotal = activeEligibleProjects.reduce((sum, p) => sum + (p.openEscalations || 0), 0);
+      const openDependenciesTotal = activeEligibleProjects.reduce((sum, p) => sum + (p.openDependencies || 0), 0);
 
       setPortfolioData({
         projects: projectsWithLastModified,
@@ -219,7 +223,8 @@ export const PortfolioProvider = ({ children }) => {
         upcomingMilestonesTotal,
         openCriticalRisksTotal,
         openCriticalIssuesTotal,
-        openEscalationsTotal
+        openEscalationsTotal,
+        openDependenciesTotal
       });
     } catch (err) {
       console.error('Error fetching portfolio data:', err);

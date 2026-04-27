@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const dbAdapter = require('./dbAdapter');
 const { authenticate } = require('./auth');
+const { initializeMetricSnapshotJob } = require('./jobs/metricSnapshotJob');
 
 // Import route modules
 const projectsRoutes = require('./routes/projects');
@@ -18,7 +19,10 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Initialize database adapter
-dbAdapter.initialize().catch(err => {
+dbAdapter.initialize().then(() => {
+  // Initialize metric snapshot job after DB is ready
+  initializeMetricSnapshotJob();
+}).catch(err => {
   console.error('Failed to initialize database:', err);
   process.exit(1);
 });

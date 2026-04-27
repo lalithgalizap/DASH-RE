@@ -61,7 +61,10 @@ class DatabaseAdapter {
       }
     }
 
-    await models.Project.findByIdAndUpdate(id, data);
+    await models.Project.findByIdAndUpdate(id, {
+      ...data,
+      dashboardUpdatedAt: new Date()
+    });
     return { changes: 1 };
   }
 

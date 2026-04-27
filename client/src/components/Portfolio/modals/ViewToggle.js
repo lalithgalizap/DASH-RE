@@ -1,6 +1,10 @@
 import React from 'react';
 
-const ViewToggle = ({ view, onChange }) => {
+const ViewToggle = ({ view, onChange, showHistory = false }) => {
+  const buttonCount = showHistory ? 3 : 2;
+  const pillWidth = `${100 / buttonCount}%`;
+  const pillLeft = view === 'list' ? '0%' : view === 'chart' ? `${100 / buttonCount}%` : `${(2 * 100) / buttonCount}%`;
+
   return (
     <div style={{ 
       display: 'inline-flex', 
@@ -17,8 +21,8 @@ const ViewToggle = ({ view, onChange }) => {
         <div style={{
           position: 'absolute',
           top: 0,
-          left: view === 'list' ? 0 : '50%',
-          width: '50%',
+          left: pillLeft,
+          width: pillWidth,
           height: '100%',
           backgroundColor: '#ffffff',
           borderRadius: '8px',
@@ -82,6 +86,33 @@ const ViewToggle = ({ view, onChange }) => {
           </svg>
           Chart
         </button>
+        {showHistory && (
+          <button
+            onClick={() => onChange('history')}
+            style={{
+              position: 'relative',
+              zIndex: 1,
+              padding: '8px 16px',
+              borderRadius: '8px',
+              border: 'none',
+              backgroundColor: 'transparent',
+              color: view === 'history' ? '#1f2937' : '#6b7280',
+              fontSize: '13px',
+              fontWeight: view === 'history' ? '600' : '500',
+              cursor: 'pointer',
+              transition: 'color 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+            History
+          </button>
+        )}
       </div>
     </div>
   );

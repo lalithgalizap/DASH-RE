@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { getRAGColor } from '../utils';
+import './modals.css';
 
 const UpdatedProjectsModal = ({ isOpen, onClose, projects }) => {
   const [expandedId, setExpandedId] = useState(null);

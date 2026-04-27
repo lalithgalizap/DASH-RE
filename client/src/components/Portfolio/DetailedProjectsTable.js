@@ -10,9 +10,12 @@ function DetailedProjectsTable({ projects, onProjectClick, onProjectUpdate }) {
 
   // Sort by last modified (most recent first)
   const sortedProjects = useMemo(() => {
+    const getTimestamp = (project) => new Date(
+      project.dashboardUpdatedAt || project.lastModified || project.updated_at || 0
+    );
     return [...projects].sort((a, b) => {
-      const dateA = new Date(a.lastModified || a.updated_at || 0);
-      const dateB = new Date(b.lastModified || b.updated_at || 0);
+      const dateA = getTimestamp(a);
+      const dateB = getTimestamp(b);
       return dateB - dateA;
     });
   }, [projects]);
@@ -34,9 +37,22 @@ function DetailedProjectsTable({ projects, onProjectClick, onProjectUpdate }) {
     }
   };
 
+  const formatUpdatedAt = (value) => {
+    if (!value) return '—';
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return '—';
+    return parsed.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+  };
+
   const handleExport = () => {
     // CSV headers
-    const headers = ['Project Name', 'SPOC', 'RAG', 'Status', 'Action Item', 'Risk Summary', 'Mitigation Plan'];
+    const headers = ['Project Name', 'SPOC', 'RAG', 'Status', 'Action Item', 'Risk Summary', 'Mitigation Plan', 'Updated At'];
 
     // CSV rows
     const rows = sortedProjects.map(project => [
@@ -46,7 +62,8 @@ function DetailedProjectsTable({ projects, onProjectClick, onProjectUpdate }) {
       project.sowStatus || '',
       project.actionItem || '',
       project.riskSummary || '',
-      project.mitigationPlan || ''
+      project.mitigationPlan || '',
+      formatUpdatedAt(project.dashboardUpdatedAt)
     ]);
 
     // Convert to CSV format
@@ -111,6 +128,7 @@ function DetailedProjectsTable({ projects, onProjectClick, onProjectUpdate }) {
                 <th>Action Item</th>
                 <th>Risk Summary</th>
                 <th>Mitigation Plan</th>
+                <th>Updated At</th>
                 <th style={{ textAlign: 'center' }}>Actions</th>
               </tr>
             </thead>
@@ -185,6 +203,15 @@ function DetailedProjectsTable({ projects, onProjectClick, onProjectUpdate }) {
                       <span className="ellipsis-text">
                         {project.mitigationPlan || '—'}
                       </span>
+                    </div>
+                  </td>
+                  <td>
+                    <div
+                      className="tooltip-cell"
+                      style={{ fontSize: '13px', color: '#374151' }}
+                      title={formatUpdatedAt(project.dashboardUpdatedAt)}
+                    >
+                      {formatUpdatedAt(project.dashboardUpdatedAt)}
                     </div>
                   </td>
                   <td style={{ textAlign: 'center' }}>

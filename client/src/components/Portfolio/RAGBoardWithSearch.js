@@ -103,8 +103,8 @@ const RAGBoardWithSearch = ({
             <div key={status} className={`rag-column rag-${status}`}>
               <div className="rag-column-header">
                 <div>
-                  <span className="rag-column-label">{status === 'red' ? 'Critical' : status === 'amber' ? 'Caution' : 'On Track'}</span>
-                  <p className="rag-column-helper">{status === 'green' ? 'Monitoring' : 'Immediate follow-up'}</p>
+                  <span className="rag-column-label">{status === 'red' ? 'Red' : status === 'amber' ? 'Amber' : 'Green'}</span>
+                  <p className="rag-column-helper">{status === 'green' ? 'On Track' : status === 'red' ? 'Critical' : 'Caution'}</p>
                 </div>
                 <span className="rag-column-count">{filteredProjects.length}</span>
               </div>

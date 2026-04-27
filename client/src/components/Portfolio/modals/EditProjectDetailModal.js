@@ -38,7 +38,8 @@ function EditProjectDetailModal({ project, isOpen, onClose, onSave }) {
         ...project,
         ...formData
       });
-      onSave({ ...project, ...formData });
+      const updatedTimestamp = new Date().toISOString();
+      onSave({ ...project, ...formData, dashboardUpdatedAt: updatedTimestamp });
       onClose();
     } catch (error) {
       console.error('Error saving project details:', error);

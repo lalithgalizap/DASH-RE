@@ -6,6 +6,7 @@ const User = require('./User');
 const Role = require('./Role');
 const Permission = require('./Permission');
 const RolePermission = require('./RolePermission');
+const MetricSnapshot = require('./MetricSnapshot');
 
 module.exports = {
   Project,
@@ -15,5 +16,6 @@ module.exports = {
   User,
   Role,
   Permission,
-  RolePermission
+  RolePermission,
+  MetricSnapshot
 };
