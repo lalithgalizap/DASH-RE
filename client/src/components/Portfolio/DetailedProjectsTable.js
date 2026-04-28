@@ -1,9 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { Edit2, Download } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 import { getRAGColor } from './utils';
 import EditProjectDetailModal from './modals/EditProjectDetailModal';
 
 function DetailedProjectsTable({ projects, onProjectClick, onProjectUpdate }) {
+  const { hasPermission } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
@@ -215,13 +217,15 @@ function DetailedProjectsTable({ projects, onProjectClick, onProjectUpdate }) {
                     </div>
                   </td>
                   <td style={{ textAlign: 'center' }}>
-                    <button
-                      className="action-btn edit-btn"
-                      onClick={() => setEditingProject(project)}
-                      title="Edit Details"
-                    >
-                      <Edit2 size={14} />
-                    </button>
+                    {hasPermission('portfolio_health', 'edit') && (
+                      <button
+                        className="action-btn edit-btn"
+                        onClick={() => setEditingProject(project)}
+                        title="Edit Details"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

@@ -48,7 +48,7 @@ async function setupDatabase() {
       { permission_name: 'view_users', description: 'Can view users' },
       { permission_name: 'manage_import', description: 'Can import data from Excel files' },
       { permission_name: 'view_portfolio', description: 'Can view portfolio dashboard' },
-      { permission_name: 'manage_portfolio', description: 'Can manage portfolio settings' },
+      { permission_name: 'edit_portfolio_health', description: 'Can edit Portfolio Health' },
       { permission_name: 'manage_roles', description: 'Can create, edit, and delete roles' },
       { permission_name: 'view_roles', description: 'Can view roles' },
       { permission_name: 'manage_closure_docs', description: 'Can upload and delete closure documents' }
@@ -136,7 +136,7 @@ async function setupDatabase() {
     console.log('Linked permissions to PMO');
 
     // CSP: view_dashboard, view_portfolio, manage_portfolio, view_projects, manage_import
-    const cspPerms = getPermIds(['view_dashboard', 'view_portfolio', 'manage_portfolio', 'view_projects', 'manage_import']);
+    const cspPerms = getPermIds(['view_dashboard', 'view_portfolio', 'view_projects', 'manage_import']);
     const cspRolePermissions = cspPerms.map(pid => ({ role_id: cspRole._id, permission_id: pid }));
     await RolePermission.insertMany(cspRolePermissions);
     console.log('Linked permissions to CSP');
@@ -148,13 +148,13 @@ async function setupDatabase() {
     console.log('Linked permissions to Managers');
 
     // SLTs: view_dashboard, view_projects, view_portfolio, view_users, view_roles, manage_portfolio
-    const sltPerms = getPermIds(['view_dashboard', 'view_projects', 'view_portfolio', 'view_users', 'view_roles', 'manage_portfolio']);
+    const sltPerms = getPermIds(['view_dashboard', 'view_projects', 'view_portfolio', 'view_users', 'view_roles']);
     const sltRolePermissions = sltPerms.map(pid => ({ role_id: sltsRole._id, permission_id: pid }));
     await RolePermission.insertMany(sltRolePermissions);
     console.log('Linked permissions to SLTs');
 
     // Superuser: All permissions EXCEPT view_roles and manage_roles
-    const superuserPerms = getPermIds(['view_dashboard', 'add_delete_projects', 'edit_projects', 'view_projects', 'manage_import', 'view_portfolio', 'manage_portfolio', 'manage_closure_docs']);
+    const superuserPerms = getPermIds(['view_dashboard', 'add_delete_projects', 'edit_projects', 'view_projects', 'manage_import', 'view_portfolio', 'manage_closure_docs']);
     const superuserRolePermissions = superuserPerms.map(pid => ({ role_id: superuserRole._id, permission_id: pid }));
     await RolePermission.insertMany(superuserRolePermissions);
     console.log('Linked permissions to Superuser');

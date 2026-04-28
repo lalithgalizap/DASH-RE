@@ -112,7 +112,7 @@ const RoleManagement = () => {
     const pageMapping = {
       'Dashboard': ['view_dashboard'],
       'Projects': ['view_projects', 'add_delete_projects', 'edit_projects', 'manage_import', 'manage_closure_docs'],
-      'Portfolio': ['view_portfolio', 'manage_portfolio'],
+      'Portfolio': ['view_portfolio', 'edit_portfolio_health'],
       'User Management': ['view_users', 'manage_users'],
       'Role Management': ['view_roles', 'manage_roles']
     };
