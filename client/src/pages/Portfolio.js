@@ -19,8 +19,7 @@ import {
   DependenciesModal,
   ProjectRadialView,
   SummaryModal,
-  RAGCategoryModal,
-  MilestoneVarianceModal
+  RAGCategoryModal
 } from '../components/Portfolio';
 import './Portfolio.css';
 
@@ -35,7 +34,6 @@ function PortfolioContent() {
   const [showOpenCriticalIssuesModal, setShowOpenCriticalIssuesModal] = useState(false);
   const [showOpenEscalationsModal, setShowOpenEscalationsModal] = useState(false);
   const [showOpenDependenciesModal, setShowOpenDependenciesModal] = useState(false);
-  const [showMilestoneVarianceModal, setShowMilestoneVarianceModal] = useState(false);
   const [radialViewProject, setRadialViewProject] = useState(null);
   const [summaryModal, setSummaryModal] = useState(null);
   const [milestoneTooltip, setMilestoneTooltip] = useState(null);
@@ -46,7 +44,7 @@ function PortfolioContent() {
   const [selectedClient, setSelectedClient] = useState('All');
   const [clientSearchQuery, setClientSearchQuery] = useState('');
   const [showClientDropdown, setShowClientDropdown] = useState(false);
-  const [tableViewMode, setTableViewMode] = useState('default'); // 'default' or 'detailed'
+  const [tableViewMode, setTableViewMode] = useState('detailed'); // 'default' or 'detailed'
 
   useEffect(() => {
     fetchPortfolioData();
@@ -441,10 +439,9 @@ function PortfolioContent() {
           summaryHighlights={summaryHighlights}
           onHighlightClick={(type) => {
             if (type === 'plannedVsActual') {
-              setShowMilestoneVarianceModal(true);
-            } else {
-              setSummaryModal(type);
+              return;
             }
+            setSummaryModal(type);
           }}
         />
 
@@ -558,21 +555,6 @@ function PortfolioContent() {
             </span>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
-                onClick={() => setTableViewMode('default')}
-                style={{
-                  padding: '6px 12px',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  background: tableViewMode === 'default' ? '#2563eb' : 'white',
-                  color: tableViewMode === 'default' ? 'white' : '#374151'
-                }}
-              >
-                Default View
-              </button>
-              <button
                 onClick={() => setTableViewMode('detailed')}
                 style={{
                   padding: '6px 12px',
@@ -585,7 +567,22 @@ function PortfolioContent() {
                   color: tableViewMode === 'detailed' ? 'white' : '#374151'
                 }}
               >
-                Detailed View
+                Portfolio Health
+              </button>
+              <button
+                onClick={() => setTableViewMode('default')}
+                style={{
+                  padding: '6px 12px',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  background: tableViewMode === 'default' ? '#2563eb' : 'white',
+                  color: tableViewMode === 'default' ? 'white' : '#374151'
+                }}
+              >
+                Portfolio Metrics
               </button>
             </div>
           </div>
@@ -718,12 +715,6 @@ function PortfolioContent() {
         selectedClient={selectedClient}
       />
 
-      {/* Milestone Variance Modal */}
-      <MilestoneVarianceModal 
-        isOpen={showMilestoneVarianceModal} 
-        onClose={() => setShowMilestoneVarianceModal(false)} 
-        projects={clientFilteredProjects}
-      />
 
       </div>
     </div>

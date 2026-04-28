@@ -41,7 +41,6 @@ const ProjectsTable = ({
               <th>Project</th>
               <th>Owner</th>
               <th>Client</th>
-              <th>RAG</th>
               <th>Overdue</th>
               <th>Upcoming</th>
               <th>Risks</th>
@@ -64,15 +63,6 @@ const ProjectsTable = ({
                   </td>
                   <td>{getProjectOwner(project)}</td>
                   <td>{project.clients || '—'}</td>
-                  <td>
-                    <div className="rag-cell">
-                      <span 
-                        className="rag-indicator" 
-                        style={{ backgroundColor: getRAGColor(project.ragStatus) }}
-                      />
-                      <span className="rag-text">{project.ragStatus || 'Green'}</span>
-                    </div>
-                  </td>
                   <td className="number-cell">{project.overdueMilestones}</td>
                   <td className="number-cell">{project.upcomingMilestones}</td>
                   <td className="number-cell">{project.openCriticalRisks}</td>
