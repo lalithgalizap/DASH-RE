@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
@@ -14,6 +16,8 @@ const authRoutes = require('./routes/auth');
 const usersRoutes = require('./routes/users');
 const rolesRoutes = require('./routes/roles');
 const metricsRoutes = require('./routes/metrics');
+const clientsRoutes = require('./routes/clients');
+const performanceRoutes = require('./routes/performance');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -40,6 +44,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/roles', rolesRoutes);
 app.use('/api/metrics', metricsRoutes);
+app.use('/api/clients', clientsRoutes);
+app.use('/api/performance', performanceRoutes);
 
 // Direct route for projects-file-status (also available at /api/metrics/projects-file-status)
 app.get('/api/projects-file-status', authenticate, async (req, res) => {

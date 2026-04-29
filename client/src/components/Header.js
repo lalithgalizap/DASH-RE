@@ -39,15 +39,15 @@ function Header() {
                   Portfolio
                 </Link>
               )}
-              {hasPermission('portfolio', 'manage') && (
-                <button className="nav-link" onClick={(e) => e.preventDefault()}>
+              {hasPermission('performance', 'view') && (
+                <Link to="/performance" className={`nav-link ${location.pathname === '/performance' ? 'active' : ''}`}>
                   Performance
-                </button>
+                </Link>
               )}
-              {hasPermission('users', 'view') && (
-                <button className="nav-link" onClick={(e) => e.preventDefault()}>
-                  Staff Augmentation
-                </button>
+              {hasPermission('weekly_updates', 'view') && (
+                <Link to="/weekly-updates" className={`nav-link ${location.pathname === '/weekly-updates' ? 'active' : ''}`}>
+                  Weekly Updates
+                </Link>
               )}
               {(hasPermission('users', 'manage') || hasPermission('roles', 'manage')) && (
                 <div className="nav-dropdown">

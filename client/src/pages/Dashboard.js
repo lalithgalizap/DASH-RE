@@ -193,8 +193,8 @@ function Dashboard() {
             setEditingProject(null);
           }}
           onSave={handleSaveProject}
-          canManageClients={editingProject ? hasPermission('projects', 'edit') : hasPermission('projects', 'add_delete')}
-          canAddClients={canAddClients()}
+          canManageClients={hasPermission('clients', 'manage')}
+          canAddClients={hasPermission('clients', 'manage')}
         />
       )}
 

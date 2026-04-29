@@ -27,4 +27,6 @@ export { default as RAGCategoryModal } from './modals/RAGCategoryModal';
 export { default as MilestoneVarianceModal } from './modals/MilestoneVarianceModal';
 export { default as EditProjectDetailModal } from './modals/EditProjectDetailModal';
 export { default as WeekDetailModal } from './modals/WeekDetailModal';
+export { default as ProjectInfoModal } from './modals/ProjectInfoModal';
+export { default as ClientManagementModal } from './modals/ClientManagementModal';
 export * from './utils';

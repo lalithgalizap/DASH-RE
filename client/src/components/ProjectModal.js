@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ChevronDown, Search, Plus, X as XIcon } from 'lucide-react';
+import { X, ChevronDown, Search, X as XIcon } from 'lucide-react';
 import axios from 'axios';
 import './ProjectModal.css';
 
@@ -17,7 +17,6 @@ function ProjectModal({ project, onClose, onSave, isAdmin, canManageClients, can
   const [allClients, setAllClients] = useState([]);
   const [showClientDropdown, setShowClientDropdown] = useState(false);
   const [clientSearch, setClientSearch] = useState('');
-  const [newClientInput, setNewClientInput] = useState('');
 
   useEffect(() => {
     fetchAllClients();
@@ -34,18 +33,9 @@ function ProjectModal({ project, onClose, onSave, isAdmin, canManageClients, can
 
   const fetchAllClients = async () => {
     try {
-      const response = await axios.get('/api/projects');
-      const projects = response.data;
-      const clientsSet = new Set();
-      projects.forEach(p => {
-        if (p.clients) {
-          p.clients.split(',').forEach(client => {
-            const trimmed = client.trim();
-            if (trimmed) clientsSet.add(trimmed);
-          });
-        }
-      });
-      setAllClients(Array.from(clientsSet).sort());
+      const response = await axios.get('/api/clients');
+      const clientNames = response.data.map(c => c.name).sort();
+      setAllClients(clientNames);
     } catch (error) {
       console.error('Error fetching clients:', error);
     }
@@ -66,7 +56,6 @@ function ProjectModal({ project, onClose, onSave, isAdmin, canManageClients, can
       });
     }
     setClientSearch('');
-    setNewClientInput('');
   };
 
   const removeClient = (client) => {
@@ -76,12 +65,6 @@ function ProjectModal({ project, onClose, onSave, isAdmin, canManageClients, can
     });
   };
 
-  const handleAddNewClient = () => {
-    const newClient = newClientInput.trim() || clientSearch.trim();
-    if (newClient && !formData.clients.includes(newClient)) {
-      addClient(newClient);
-    }
-  };
 
   const filteredClients = allClients.filter(client =>
     client.toLowerCase().includes(clientSearch.toLowerCase()) &&
@@ -175,11 +158,10 @@ function ProjectModal({ project, onClose, onSave, isAdmin, canManageClients, can
                     <Search size={16} className="search-icon" />
                     <input
                       type="text"
-                      placeholder="Search or add new client..."
-                      value={clientSearch || newClientInput}
+                      placeholder="Search clients..."
+                      value={clientSearch}
                       onChange={(e) => {
                         setClientSearch(e.target.value);
-                        setNewClientInput(e.target.value);
                       }}
                       onClick={(e) => e.stopPropagation()}
                       className="client-search-input"
@@ -204,18 +186,6 @@ function ProjectModal({ project, onClose, onSave, isAdmin, canManageClients, can
                       ) : (
                         <div className="client-option no-results">
                           No existing clients found
-                        </div>
-                      )}
-                      {canAddClients && (clientSearch.trim() || newClientInput.trim()) && !formData.clients.includes(clientSearch.trim() || newClientInput.trim()) && (
-                        <div
-                          className="client-option add-new"
-                          onClick={() => {
-                            handleAddNewClient();
-                            setShowClientDropdown(false);
-                          }}
-                        >
-                          <Plus size={14} />
-                          Add "{clientSearch || newClientInput}" as new client
                         </div>
                       )}
                     </div>

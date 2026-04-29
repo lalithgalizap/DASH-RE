@@ -75,49 +75,65 @@ class DatabaseAdapter {
 
   // Users
   async getAllUsers() {
-    const users = await models.User.find().populate('role_id').lean();
+    const users = await models.User.find().populate('role_id').populate('manager_id').populate('client_id').lean();
     return users.map(u => ({ 
       ...u, 
       id: u._id.toString(), 
       role_id: u.role_id?._id.toString(),
       role: u.role_id?.role_name,
-      role_name: u.role_id?.role_name
+      role_name: u.role_id?.role_name,
+      manager_id: u.manager_id?._id.toString(),
+      manager_name: u.manager_id?.username,
+      client_id: u.client_id?._id.toString(),
+      client_name: u.client_id?.name
     }));
   }
 
   async getUserById(id) {
-    const user = await models.User.findById(id).populate('role_id').lean();
+    const user = await models.User.findById(id).populate('role_id').populate('manager_id').populate('client_id').lean();
     if (!user) return null;
     return { 
       ...user, 
       id: user._id.toString(), 
       role_id: user.role_id?._id.toString(),
       role: user.role_id?.role_name,
-      role_name: user.role_id?.role_name
+      role_name: user.role_id?.role_name,
+      manager_id: user.manager_id?._id.toString(),
+      manager_name: user.manager_id?.username,
+      client_id: user.client_id?._id.toString(),
+      client_name: user.client_id?.name
     };
   }
 
   async getUserByUsername(username) {
-    const user = await models.User.findOne({ username }).populate('role_id').lean();
+    const user = await models.User.findOne({ username }).populate('role_id').populate('manager_id').populate('client_id').lean();
     if (!user) return null;
     return { 
       ...user, 
       id: user._id.toString(), 
       role_id: user.role_id?._id.toString(),
       role: user.role_id?.role_name,
-      role_name: user.role_id?.role_name
+      role_name: user.role_id?.role_name,
+      manager_id: user.manager_id?._id.toString(),
+      manager_name: user.manager_id?.username,
+      client_id: user.client_id?._id.toString(),
+      client_name: user.client_id?.name
     };
   }
 
   async getUserByEmail(email) {
-    const user = await models.User.findOne({ email: email.toLowerCase() }).populate('role_id').lean();
+    const user = await models.User.findOne({ email: email.toLowerCase() }).populate('role_id').populate('manager_id').populate('client_id').lean();
     if (!user) return null;
     return { 
       ...user, 
       id: user._id.toString(), 
       role_id: user.role_id?._id.toString(),
       role: user.role_id?.role_name,
-      role_name: user.role_id?.role_name
+      role_name: user.role_id?.role_name,
+      manager_id: user.manager_id?._id.toString(),
+      manager_name: user.manager_id?.username,
+      client_id: user.client_id?._id.toString(),
+      client_name: user.client_id?.name
     };
   }
 
@@ -255,6 +271,80 @@ class DatabaseAdapter {
   async createEvent(data) {
     const event = await models.Event.create(data);
     return { id: event._id.toString() };
+  }
+
+  // Clients
+  async getAllClients() {
+    const clients = await models.Client.find().sort({ name: 1 }).lean();
+    return clients.map(c => ({ ...c, id: c._id.toString() }));
+  }
+
+  async createClient(name) {
+    const client = await models.Client.create({ name });
+    return { id: client._id.toString(), name };
+  }
+
+  async deleteClient(id) {
+    await models.Client.findByIdAndDelete(id);
+    return { changes: 1 };
+  }
+
+  // Performance Reports
+  async getPerformanceReports(filter = {}) {
+    const query = {};
+    if (filter.resource_id) query.resource_id = filter.resource_id;
+    if (filter.client_id) query.client_id = filter.client_id;
+    if (filter.manager_id) query.manager_id = filter.manager_id;
+    
+    const reports = await models.PerformanceReport.find(query)
+      .populate('resource_id')
+      .populate('client_id')
+      .populate('manager_id')
+      .sort({ report_date: -1 })
+      .lean();
+    
+    return reports.map(r => ({
+      ...r,
+      id: r._id.toString(),
+      resource_name: r.resource_id?.username,
+      client_name: r.client_id?.name,
+      manager_name: r.manager_id?.username,
+      resource_id: r.resource_id?._id.toString(),
+      client_id: r.client_id?._id.toString(),
+      manager_id: r.manager_id?._id.toString()
+    }));
+  }
+
+  async createPerformanceReport(data) {
+    const report = await models.PerformanceReport.create(data);
+    return { id: report._id.toString() };
+  }
+
+  async updatePerformanceReport(id, data) {
+    await models.PerformanceReport.findByIdAndUpdate(id, data);
+    return { changes: 1 };
+  }
+
+  async deletePerformanceReport(id) {
+    await models.PerformanceReport.findByIdAndDelete(id);
+    return { changes: 1 };
+  }
+
+  // Users by client (for performance page)
+  async getUsersByClient(clientId, roleName = null) {
+    const query = { client_id: clientId };
+    if (roleName) {
+      const role = await models.Role.findOne({ role_name: roleName }).lean();
+      if (role) query.role_id = role._id;
+    }
+    const users = await models.User.find(query).populate('role_id').populate('manager_id').lean();
+    return users.map(u => ({
+      ...u,
+      id: u._id.toString(),
+      role_name: u.role_id?.role_name,
+      manager_name: u.manager_id?.username,
+      manager_id: u.manager_id?._id.toString()
+    }));
   }
 }
 

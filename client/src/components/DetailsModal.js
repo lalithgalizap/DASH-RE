@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
+import axios from 'axios';
 import './DetailsModal.css';
 
 function DetailsModal({ project, onClose, onSave }) {
@@ -14,6 +15,7 @@ function DetailsModal({ project, onClose, onSave }) {
     status: 'Demo',
     mcc: 'Internal'
   });
+  const [allClients, setAllClients] = useState([]);
 
   useEffect(() => {
     if (project) {
@@ -30,6 +32,18 @@ function DetailsModal({ project, onClose, onSave }) {
       });
     }
   }, [project]);
+
+  useEffect(() => {
+    const fetchClients = async () => {
+      try {
+        const response = await axios.get('/api/clients');
+        setAllClients(response.data.map(c => c.name).sort());
+      } catch (err) {
+        console.error('Error fetching clients:', err);
+      }
+    };
+    fetchClients();
+  }, []);
 
   const handleChange = (e) => {
     setFormData({
@@ -116,13 +130,16 @@ function DetailsModal({ project, onClose, onSave }) {
 
           <div className="form-group">
             <label>CUSTOMER ENGAGEMENT</label>
-            <input
-              type="text"
+            <select
               name="clients"
               value={formData.clients}
               onChange={handleChange}
-              placeholder="e.g. BMS, Jazz Pharmaceuticals"
-            />
+            >
+              <option value="">Select a client...</option>
+              {allClients.map(client => (
+                <option key={client} value={client}>{client}</option>
+              ))}
+            </select>
           </div>
 
           <div className="form-group">

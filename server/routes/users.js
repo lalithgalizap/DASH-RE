@@ -18,7 +18,7 @@ router.get('/', authenticate, requireAdmin, async (req, res) => {
 
 // Create user
 router.post('/', authenticate, requireAdmin, async (req, res) => {
-  const { username, email, password, role_id, is_active, send_email } = req.body;
+  const { username, email, password, role_id, manager_id, client_id, is_active, send_email } = req.body;
   
   if (!username || !email || !password) {
     return res.status(400).json({ error: 'Username, email, and password are required' });
@@ -26,7 +26,11 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
 
   try {
     const hashedPassword = bcrypt.hashSync(password, 10);
-    const result = await dbAdapter.createUser({ username, email, password: hashedPassword, role_id: role_id || null });
+    const createData = { username, email, password: hashedPassword, role_id: role_id || null };
+    if (manager_id) createData.manager_id = manager_id;
+    if (client_id) createData.client_id = client_id;
+    if (is_active !== undefined) createData.is_active = is_active;
+    const result = await dbAdapter.createUser(createData);
     
     if (send_email) {
       const emailResult = await sendWelcomeEmail(email, username, password);
@@ -47,7 +51,7 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
 // Update user
 router.put('/:id', authenticate, requireAdmin, async (req, res) => {
   try {
-    const { username, email, password, role_id, is_active } = req.body;
+    const { username, email, password, role_id, manager_id, client_id, is_active } = req.body;
     
     const updateData = {};
     if (username) updateData.username = username;
@@ -57,6 +61,12 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
     }
     if (role_id !== undefined) {
       updateData.role_id = role_id || null;
+    }
+    if (manager_id !== undefined) {
+      updateData.manager_id = manager_id || null;
+    }
+    if (client_id !== undefined) {
+      updateData.client_id = client_id || null;
     }
     if (is_active !== undefined) {
       updateData.is_active = is_active;

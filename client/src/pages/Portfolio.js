@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search } from 'lucide-react';
+import { Search, Users } from 'lucide-react';
 import PortfolioMetrics from '../components/PortfolioMetrics';
+import { useAuth } from '../contexts/AuthContext';
 import { 
   PortfolioProvider, 
   usePortfolio,
@@ -19,12 +20,15 @@ import {
   DependenciesModal,
   ProjectRadialView,
   SummaryModal,
-  RAGCategoryModal
+  RAGCategoryModal,
+  ProjectInfoModal,
+  ClientManagementModal
 } from '../components/Portfolio';
 import './Portfolio.css';
 
 function PortfolioContent() {
   const navigate = useNavigate();
+  const { hasPermission } = useAuth();
   const { portfolioData, loading, error, fetchPortfolioData } = usePortfolio();
   const [showRAGProjectsModal, setShowRAGProjectsModal] = useState(false);
   const [showUpdatedProjectsModal, setShowUpdatedProjectsModal] = useState(false);
@@ -36,33 +40,37 @@ function PortfolioContent() {
   const [showOpenDependenciesModal, setShowOpenDependenciesModal] = useState(false);
   const [radialViewProject, setRadialViewProject] = useState(null);
   const [summaryModal, setSummaryModal] = useState(null);
-  const [milestoneTooltip, setMilestoneTooltip] = useState(null);
   const [ragSearchQuery, setRagSearchQuery] = useState('');
-  const [ragExpandedProjectId, setRagExpandedProjectId] = useState(null);
   const [ragCategoryModal, setRagCategoryModal] = useState(null);
+  const [selectedProjectForModal, setSelectedProjectForModal] = useState(null);
   const [projectSearchQuery, setProjectSearchQuery] = useState('');
   const [selectedClient, setSelectedClient] = useState('All');
   const [clientSearchQuery, setClientSearchQuery] = useState('');
   const [showClientDropdown, setShowClientDropdown] = useState(false);
   const [tableViewMode, setTableViewMode] = useState('detailed'); // 'default' or 'detailed'
+  const [showClientManagement, setShowClientManagement] = useState(false);
+  const [allClients, setAllClients] = useState(['All']);
 
   useEffect(() => {
     fetchPortfolioData();
   }, [fetchPortfolioData]);
 
-  // Get unique clients from all projects
-  const allClients = useMemo(() => {
-    const clientsSet = new Set();
-    (portfolioData.projects || []).forEach(project => {
-      if (project.clients) {
-        project.clients.split(',').forEach(client => {
-          const trimmed = client.trim();
-          if (trimmed) clientsSet.add(trimmed);
-        });
+  // Fetch global clients from API
+  useEffect(() => {
+    const fetchClients = async () => {
+      try {
+        const response = await fetch('/api/clients');
+        if (response.ok) {
+          const data = await response.json();
+          const clientNames = data.map(c => c.name).sort();
+          setAllClients(['All', ...clientNames]);
+        }
+      } catch (err) {
+        console.error('Error fetching clients:', err);
       }
-    });
-    return ['All', ...Array.from(clientsSet).sort()];
-  }, [portfolioData.projects]);
+    };
+    fetchClients();
+  }, []);
 
   // Filter projects by selected client
   const clientFilteredProjects = useMemo(() => {
@@ -254,6 +262,43 @@ function PortfolioContent() {
           marginBottom: '20px',
           padding: '0 4px'
         }}>
+          {hasPermission('clients', 'manage') && (
+            <button
+              onClick={() => setShowClientManagement(true)}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#4f46e5';
+                e.currentTarget.style.color = '#ffffff';
+                e.currentTarget.style.borderColor = '#4f46e5';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(79, 70, 229, 0.25)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#ffffff';
+                e.currentTarget.style.color = '#4f46e5';
+                e.currentTarget.style.borderColor = '#c7d2fe';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+              style={{
+                marginRight: '12px',
+                padding: '8px 16px',
+                backgroundColor: '#ffffff',
+                border: '1.5px solid #c7d2fe',
+                borderRadius: '10px',
+                fontSize: '13px',
+                fontWeight: 600,
+                color: '#4f46e5',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s ease',
+                outline: 'none'
+              }}
+            >
+              <Users size={15} />
+              Manage Clients
+            </button>
+          )}
           <div style={{ position: 'relative' }}>
             <div 
               onClick={() => setShowClientDropdown(!showClientDropdown)}
@@ -483,11 +528,8 @@ function PortfolioContent() {
         ragBuckets={ragBuckets}
         ragSearchQuery={ragSearchQuery}
         setRagSearchQuery={setRagSearchQuery}
-        ragExpandedProjectId={ragExpandedProjectId}
-        setRagExpandedProjectId={setRagExpandedProjectId}
-        milestoneTooltip={milestoneTooltip}
-        setMilestoneTooltip={setMilestoneTooltip}
         setRagCategoryModal={setRagCategoryModal}
+        onProjectSelect={setSelectedProjectForModal}
       />
 
       <div className="portfolio-main-grid">
@@ -632,20 +674,7 @@ function PortfolioContent() {
         isOpen={!!ragCategoryModal}
         onClose={() => setRagCategoryModal(null)}
         modalData={ragCategoryModal}
-        expandedProjectId={ragExpandedProjectId}
-        onToggleProject={setRagExpandedProjectId}
-        milestoneTooltip={milestoneTooltip}
-        onMilestoneClick={(projectId, idx, name, date, status, milestone) => {
-          setMilestoneTooltip({
-            projectId,
-            milestoneIndex: idx,
-            name,
-            date,
-            status,
-            milestone
-          });
-        }}
-        onCloseTooltip={() => setMilestoneTooltip(null)}
+        onProjectSelect={setSelectedProjectForModal}
       />
 
       {/* RAG Status Modal */}
@@ -715,6 +744,18 @@ function PortfolioContent() {
         selectedClient={selectedClient}
       />
 
+      {/* Project Info Modal */}
+      <ProjectInfoModal
+        project={selectedProjectForModal}
+        isOpen={!!selectedProjectForModal}
+        onClose={() => setSelectedProjectForModal(null)}
+      />
+
+      {/* Client Management Modal */}
+      <ClientManagementModal
+        isOpen={showClientManagement}
+        onClose={() => setShowClientManagement(false)}
+      />
 
       </div>
     </div>

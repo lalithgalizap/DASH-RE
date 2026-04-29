@@ -20,6 +20,10 @@ export const ProtectedRoute = ({ children, requirePermission, resource, action }
 
   if (requirePermission && resource && action) {
     if (!hasPermission(resource, action)) {
+      // If user has weekly_updates view permission, redirect there instead of showing denied
+      if (hasPermission('weekly_updates', 'view')) {
+        return <Navigate to="/weekly-updates" replace />;
+      }
       return (
         <div className="access-denied">
           <h2>Access Denied</h2>

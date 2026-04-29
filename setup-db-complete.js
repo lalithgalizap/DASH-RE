@@ -49,16 +49,21 @@ async function setupDatabase() {
       { permission_name: 'manage_import', description: 'Can import data from Excel files' },
       { permission_name: 'view_portfolio', description: 'Can view portfolio dashboard' },
       { permission_name: 'edit_portfolio_health', description: 'Can edit Portfolio Health' },
+      { permission_name: 'manage_clients', description: 'Can create and delete global clients' },
       { permission_name: 'manage_roles', description: 'Can create, edit, and delete roles' },
       { permission_name: 'view_roles', description: 'Can view roles' },
-      { permission_name: 'manage_closure_docs', description: 'Can upload and delete closure documents' }
+      { permission_name: 'manage_closure_docs', description: 'Can upload and delete closure documents' },
+      { permission_name: 'view_weekly_updates', description: 'Can view Weekly Updates page' },
+      { permission_name: 'view_performance', description: 'Can view Performance page' },
+      { permission_name: 'manage_performance', description: 'Can upload and manage performance reports' },
+      { permission_name: 'manage_staff_augmentation', description: 'Can manage staff augmentation resources' }
     ]);
     console.log(`Created ${permissions.length} permissions`);
 
     // Helper to get permission IDs by name
     const getPermIds = (names) => permissions.filter(p => names.includes(p.permission_name)).map(p => p._id);
 
-    // Create 6 default roles (undeletable)
+    // Create 9 default roles (undeletable)
     console.log('Creating default roles...');
 
     // 1. Admin - Full access
@@ -110,7 +115,21 @@ async function setupDatabase() {
       permissions: []
     });
 
-    console.log('Created 7 default roles');
+    // 8. Manager - Can view Weekly Updates and Performance, manage staff augmentation
+    const managerRole = await Role.create({
+      role_name: 'Manager',
+      description: 'Manager - Can view Weekly Updates, Performance, and manage resources (Cannot be deleted)',
+      permissions: []
+    });
+
+    // 9. Resource - Can view Weekly Updates and Performance only
+    const resourceRole = await Role.create({
+      role_name: 'Resource',
+      description: 'Resource - Can view Weekly Updates and Performance (Cannot be deleted)',
+      permissions: []
+    });
+
+    console.log('Created 9 default roles');
 
     // Link permissions to each role
     console.log('Linking permissions to roles...');
@@ -122,6 +141,18 @@ async function setupDatabase() {
     }));
     await RolePermission.insertMany(adminRolePermissions);
     console.log('Linked all permissions to Admin');
+
+    // Manager: view_weekly_updates, view_performance, manage_staff_augmentation
+    const mgrPerms = getPermIds(['view_weekly_updates', 'view_performance', 'manage_staff_augmentation']);
+    const mgrRolePermissions = mgrPerms.map(pid => ({ role_id: managerRole._id, permission_id: pid }));
+    await RolePermission.insertMany(mgrRolePermissions);
+    console.log('Linked permissions to Manager');
+
+    // Resource: view_weekly_updates, view_performance
+    const resPerms = getPermIds(['view_weekly_updates', 'view_performance']);
+    const resRolePermissions = resPerms.map(pid => ({ role_id: resourceRole._id, permission_id: pid }));
+    await RolePermission.insertMany(resRolePermissions);
+    console.log('Linked permissions to Resource');
 
     // PM: view_dashboard, view_projects, add_delete_projects, edit_projects, manage_import, manage_closure_docs
     const pmPerms = getPermIds(['view_dashboard', 'view_projects', 'add_delete_projects', 'edit_projects', 'manage_import', 'manage_closure_docs']);
@@ -135,8 +166,8 @@ async function setupDatabase() {
     await RolePermission.insertMany(pmoRolePermissions);
     console.log('Linked permissions to PMO');
 
-    // CSP: view_dashboard, view_portfolio, manage_portfolio, view_projects, manage_import
-    const cspPerms = getPermIds(['view_dashboard', 'view_portfolio', 'view_projects', 'manage_import']);
+    // CSP: view_dashboard, view_portfolio, manage_portfolio, view_projects, manage_import, view_performance, manage_performance
+    const cspPerms = getPermIds(['view_dashboard', 'view_portfolio', 'view_projects', 'manage_import', 'view_performance', 'manage_performance']);
     const cspRolePermissions = cspPerms.map(pid => ({ role_id: cspRole._id, permission_id: pid }));
     await RolePermission.insertMany(cspRolePermissions);
     console.log('Linked permissions to CSP');

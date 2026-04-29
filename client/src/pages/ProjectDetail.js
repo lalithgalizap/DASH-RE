@@ -142,7 +142,7 @@ function ProjectDetail() {
           onSave={handleSaveProject}
           isAdmin={isAdmin() === true}
           canManageClients={hasPermission('projects', 'edit')}
-          canAddClients={hasPermission('projects', 'add_delete')}
+          canAddClients={hasPermission('clients', 'manage')}
         />
       )}
 

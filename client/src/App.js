@@ -9,6 +9,8 @@ import Portfolio from './pages/Portfolio';
 import Login from './pages/Login';
 import UserManagement from './pages/UserManagement';
 import RoleManagement from './pages/RoleManagement';
+import WeeklyUpdates from './pages/WeeklyUpdates';
+import Performance from './pages/Performance';
 import './App.css';
 
 function App() {
@@ -32,6 +34,16 @@ function App() {
             <Route path="/portfolio" element={
               <ProtectedRoute requirePermission resource="portfolio" action="view">
                 <Portfolio />
+              </ProtectedRoute>
+            } />
+            <Route path="/weekly-updates" element={
+              <ProtectedRoute requirePermission resource="weekly_updates" action="view">
+                <WeeklyUpdates />
+              </ProtectedRoute>
+            } />
+            <Route path="/performance" element={
+              <ProtectedRoute requirePermission resource="performance" action="view">
+                <Performance />
               </ProtectedRoute>
             } />
             <Route path="/admin/users" element={

@@ -83,9 +83,21 @@ export const AuthProvider = ({ children }) => {
     return user?.role === 'Admin' || user?.role_name === 'Admin';
   };
 
+  const isManager = () => {
+    return user?.role === 'Manager' || user?.role_name === 'Manager';
+  };
+
+  const isCSP = () => {
+    return user?.role === 'CSP' || user?.role_name === 'CSP';
+  };
+
+  const canManagePerformance = () => {
+    return hasPermission('performance', 'manage') || isAdmin() || isCSP();
+  };
+
   const canAddClients = () => {
-    // Only Admin and Superuser can add new clients
-    return user?.role === 'Admin' || user?.role_name === 'Admin' ||
+    return hasPermission('clients', 'manage') ||
+           user?.role === 'Admin' || user?.role_name === 'Admin' ||
            user?.role === 'Superuser' || user?.role_name === 'Superuser';
   };
 
@@ -141,6 +153,9 @@ export const AuthProvider = ({ children }) => {
     logout,
     hasPermission,
     isAdmin,
+    isManager,
+    isCSP,
+    canManagePerformance,
     canAddClients,
     checkAuth,
     sendResetCode,

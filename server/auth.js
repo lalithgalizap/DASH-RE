@@ -88,7 +88,7 @@ const getUserPermissions = async (userId, callback) => {
 
 const generateToken = (user) => {
   return jwt.sign(
-    { id: user.id, username: user.username, email: user.email, role_id: user.role_id },
+    { id: user.id, username: user.username, email: user.email, role_id: user.role_id, role_name: user.role_name || user.role },
     JWT_SECRET,
     { expiresIn: '24h' }
   );
