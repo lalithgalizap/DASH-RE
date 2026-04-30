@@ -63,6 +63,9 @@
   border-radius: 6px;
   font-size: 13px;
   cursor: pointer;
+  width: auto;
+  min-width: 120px;
+  max-width: 160px;
 }
 
 .filter-select:hover {

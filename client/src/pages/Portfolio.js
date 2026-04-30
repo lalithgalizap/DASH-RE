@@ -133,7 +133,7 @@ function PortfolioContent() {
     const query = projectSearchQuery.toLowerCase().trim();
     return projects.filter(project => {
       const nameMatch = (project.name || '').toLowerCase().includes(query);
-      const clientMatch = (project.client || project.clientName || '').toLowerCase().includes(query);
+      const clientMatch = (project.clients || '').toLowerCase().includes(query);
       return nameMatch || clientMatch;
     });
   }, [clientFilteredProjects, projectSearchQuery]);
@@ -313,7 +313,8 @@ function PortfolioContent() {
                 boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05)',
                 transition: 'all 0.2s ease',
                 cursor: 'pointer',
-                minWidth: '220px'
+                minWidth: '160px',
+                maxWidth: '200px'
               }}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round">
