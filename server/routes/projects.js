@@ -132,8 +132,17 @@ router.post('/', authenticate, requirePermission('projects', 'add_delete'), asyn
 // PUT update project
 router.put('/:id', authenticate, requirePermission('projects', 'edit'), async (req, res) => {
   try {
-    const { name, priority, stage, summary, status, clients, links, owner, vertical, region, sponsor, anchor_customer, spoc, actionItem, riskSummary, mitigationPlan, sowStatus } = req.body;
-    const result = await dbAdapter.updateProject(req.params.id, { name, priority, stage, summary, status, clients, links, owner, vertical, region, sponsor, anchor_customer, spoc, actionItem, riskSummary, mitigationPlan, sowStatus });
+    const { name, priority, stage, summary, status, clients, links, owner, vertical, region, sponsor, anchor_customer, spoc, actionItem, riskSummary, mitigationPlan, sowStatus, dashboardUpdatedAt } = req.body;
+    
+    // Build update object
+    const updateData = { name, priority, stage, summary, status, clients, links, owner, vertical, region, sponsor, anchor_customer, spoc, actionItem, riskSummary, mitigationPlan, sowStatus };
+    
+    // Only update dashboardUpdatedAt if explicitly provided (Portfolio edit form sends this)
+    if (dashboardUpdatedAt !== undefined) {
+      updateData.dashboardUpdatedAt = dashboardUpdatedAt;
+    }
+    
+    const result = await dbAdapter.updateProject(req.params.id, updateData);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -163,6 +172,8 @@ router.patch('/:id/:field', authenticate, requirePermission('projects', 'edit'),
     }
     
     project[field] = value;
+    // Remove dashboardUpdatedAt to prevent updating Portfolio timestamp from PATCH updates
+    delete project.dashboardUpdatedAt;
     const result = await dbAdapter.updateProject(id, project);
     res.json({ success: true, changes: result.changes, field, value });
   } catch (err) {

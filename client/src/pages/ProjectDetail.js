@@ -51,7 +51,9 @@ function ProjectDetail() {
 
   const handleSaveProject = async (projectData) => {
     try {
-      await axios.put(`/api/projects/${id}`, projectData);
+      // Remove dashboardUpdatedAt to prevent updating Portfolio "Updated At" timestamp
+      const { dashboardUpdatedAt, ...dataWithoutTimestamp } = projectData;
+      await axios.put(`/api/projects/${id}`, dataWithoutTimestamp);
       setShowProjectModal(false);
       fetchProjectDetails();
     } catch (error) {
@@ -64,7 +66,9 @@ function ProjectDetail() {
 
   const handleSaveDetails = async (detailsData) => {
     try {
-      const updatedProject = { ...project, ...detailsData };
+      // Remove dashboardUpdatedAt to prevent updating Portfolio "Updated At" timestamp
+      const { dashboardUpdatedAt, ...projectWithoutTimestamp } = project;
+      const updatedProject = { ...projectWithoutTimestamp, ...detailsData };
       await axios.put(`/api/projects/${id}`, updatedProject);
       setShowDetailsModal(false);
       fetchProjectDetails();

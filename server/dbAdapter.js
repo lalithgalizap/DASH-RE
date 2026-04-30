@@ -61,10 +61,15 @@ class DatabaseAdapter {
       }
     }
 
-    await models.Project.findByIdAndUpdate(id, {
-      ...data,
-      dashboardUpdatedAt: new Date()
-    });
+    const updateData = { ...data };
+    
+    // Only set dashboardUpdatedAt if explicitly provided in data
+    // If not provided, don't update it (preserve existing value in DB)
+    if (data.dashboardUpdatedAt === undefined) {
+      delete updateData.dashboardUpdatedAt;
+    }
+    
+    await models.Project.findByIdAndUpdate(id, updateData);
     return { changes: 1 };
   }
 

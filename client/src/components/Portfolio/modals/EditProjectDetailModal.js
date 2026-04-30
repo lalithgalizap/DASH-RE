@@ -34,11 +34,12 @@ function EditProjectDetailModal({ project, isOpen, onClose, onSave }) {
     e.preventDefault();
     setSaving(true);
     try {
+      const updatedTimestamp = new Date().toISOString();
       await axios.put(`/api/projects/${project._id || project.id}`, {
         ...project,
-        ...formData
+        ...formData,
+        dashboardUpdatedAt: updatedTimestamp
       });
-      const updatedTimestamp = new Date().toISOString();
       onSave({ ...project, ...formData, dashboardUpdatedAt: updatedTimestamp });
       onClose();
     } catch (error) {
