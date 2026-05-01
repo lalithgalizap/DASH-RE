@@ -109,13 +109,13 @@ function ProjectDetail() {
               {(hasPermission('projects', 'add_delete') || hasPermission('projects', 'edit')) && (
                 <>
                   {hasPermission('projects', 'add_delete') && (
-                    <button className="action-btn upload-btn" onClick={() => setShowUploadModal(true)}>
+                    <button className="header-action-btn upload-btn" onClick={() => setShowUploadModal(true)}>
                       <Upload size={16} />
                       Upload Document
                     </button>
                   )}
                   {hasPermission('projects', 'edit') && (
-                    <button className="action-btn edit-btn" onClick={() => setShowProjectModal(true)}>
+                    <button className="header-action-btn edit-btn" onClick={() => setShowProjectModal(true)}>
                       <Edit size={16} />
                       Edit Project
                     </button>

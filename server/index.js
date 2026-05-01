@@ -18,6 +18,7 @@ const rolesRoutes = require('./routes/roles');
 const metricsRoutes = require('./routes/metrics');
 const clientsRoutes = require('./routes/clients');
 const performanceRoutes = require('./routes/performance');
+const weeklyUpdatesRoutes = require('./routes/weeklyUpdates');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -46,6 +47,7 @@ app.use('/api/roles', rolesRoutes);
 app.use('/api/metrics', metricsRoutes);
 app.use('/api/clients', clientsRoutes);
 app.use('/api/performance', performanceRoutes);
+app.use('/api/weekly-updates', weeklyUpdatesRoutes);
 
 // Direct route for projects-file-status (also available at /api/metrics/projects-file-status)
 app.get('/api/projects-file-status', authenticate, async (req, res) => {

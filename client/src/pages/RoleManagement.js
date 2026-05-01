@@ -113,7 +113,7 @@ const RoleManagement = () => {
       'Dashboard': ['view_dashboard'],
       'Projects': ['view_projects', 'add_delete_projects', 'edit_projects', 'manage_import', 'manage_closure_docs', 'manage_clients'],
       'Portfolio': ['view_portfolio', 'edit_portfolio_health'],
-      'Weekly Updates & Performance': ['view_weekly_updates', 'view_performance', 'manage_staff_augmentation'],
+      'Weekly Updates & Performance': ['view_weekly_updates', 'manage_weekly_updates', 'view_global_weekly_updates', 'view_performance', 'manage_staff_augmentation'],
       'User Management': ['view_users', 'manage_users'],
       'Role Management': ['view_roles', 'manage_roles']
     };

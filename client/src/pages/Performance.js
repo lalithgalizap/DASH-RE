@@ -49,6 +49,8 @@ function Performance() {
   const [selectedClientFilter, setSelectedClientFilter] = useState('');
   const [noReportResources, setNoReportResources] = useState([]);
   const [showNoReportModal, setShowNoReportModal] = useState(false);
+  const [noReportSearch, setNoReportSearch] = useState('');
+  const [noReportRoleFilter, setNoReportRoleFilter] = useState('all'); // 'all' | 'manager' | 'resource'
 
   // All resources state and filters
   const [allResources, setAllResources] = useState([]);
@@ -58,30 +60,27 @@ function Performance() {
     search: ''
   });
 
-  // Client filters
-  const [clientFilters, setClientFilters] = useState({
-    search: '',
-    status: ''
+  // Report filters for reports view
+  const [reportFilters, setReportFilters] = useState({
+    quarter: '',
+    year: ''
   });
 
-  const { user, canManagePerformance } = useAuth();
+  const { user, canManagePerformance, canViewGlobalPerformance } = useAuth();
 
   useEffect(() => {
     fetchClients();
     fetchMetrics();
     fetchAllResources();
+    
+    // Refresh data when window regains focus (user returns from edit page)
+    const handleFocus = () => {
+      fetchMetrics();
+      fetchAllResources();
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, []);
-
-  // Reset client filter when returning to clients view
-  useEffect(() => {
-    if (view === 'clients') {
-      setSelectedClientFilter('');
-    }
-  }, [view]);
-
-  useEffect(() => {
-    fetchMetrics();
-  }, [selectedClientFilter]);
 
   const fetchClients = async () => {
     try {
@@ -103,7 +102,11 @@ function Performance() {
         : '/api/performance/metrics';
       const response = await axios.get(url);
       setMetrics(response.data);
-      setNoReportResources(response.data.resourcesWithoutReport || []);
+      const combined = [
+        ...(response.data.resourcesWithoutReport || []),
+        ...(response.data.managersWithoutReport || [])
+      ];
+      setNoReportResources(combined);
     } catch (error) {
       console.error('Error fetching metrics:', error);
     } finally {
@@ -195,18 +198,15 @@ function Performance() {
     setSearchParams(params);
   };
 
-  const handleClientClick = (client) => {
-    setSelectedClient(client);
-    setSelectedClientFilter(client.id);
-    setView('resources');
-    updateUrlParams('resources', client.id);
-    fetchResources(client.id);
-  };
-
   const handleResourceClick = (resource) => {
     setSelectedResource(resource);
+    // If selectedClient is not set (e.g., clicking from All Resources table), find and set the client
+    if (!selectedClient && resource.client_id) {
+      const client = clients.find(c => c.id === resource.client_id);
+      if (client) setSelectedClient(client);
+    }
     setView('reports');
-    updateUrlParams('reports', selectedClient?.id, resource.id);
+    updateUrlParams('reports', selectedClient?.id || resource?.client_id, resource.id);
     fetchReports(resource.id);
   };
 
@@ -298,10 +298,18 @@ function Performance() {
 
   const handleSaveReport = async () => {
     try {
+      // Get client_id from selectedClient or fallback to selectedResource.client_id
+      const clientId = selectedClient?.id || selectedResource?.client_id || selectedResource?.clientId;
+      if (!clientId) {
+        alert('Error: Could not determine client for this resource');
+        return;
+      }
+      
+      const isManagerRole = String(selectedResource.role_name || selectedResource.role || '').toLowerCase() === 'manager';
       const payload = {
         resource_id: selectedResource.id,
-        client_id: selectedClient.id,
-        manager_id: selectedResource.manager_id || selectedResource.managerId || '',
+        client_id: clientId,
+        manager_id: selectedResource.manager_id || selectedResource.managerId || (isManagerRole ? selectedResource.id : user?.id || ''),
         ...confirmForm
       };
       if (editingReport) {
@@ -445,7 +453,9 @@ function Performance() {
           </svg>
 
           {/* Needle */}
-          <div className="gauge-needle" style={{ transform: `rotate(${rotation}deg)` }}></div>
+          <div className="gauge-needle-wrapper">
+            <div className="gauge-needle" style={{ transform: `rotate(${rotation}deg)` }}></div>
+          </div>
           <div className="gauge-center"></div>
           <div className="gauge-score-number">{percentage}%</div>
         </div>
@@ -504,37 +514,75 @@ function Performance() {
           {/* Dashboard Metrics */}
           {metrics && (
             <div className="metrics-cards-row three-col">
-              <div className="metric-card-large">
+              <div className="metric-card-large metric-card-compact">
                 <h5>Overall Performance</h5>
-                <Gauge
-                  percentage={metrics.totalWithLatestReport > 0 ? metrics.overallScore : 0}
-                  label={metrics.totalWithLatestReport > 0
-                    ? metrics.overallScore >= 70 ? 'Excellent'
-                    : metrics.overallScore >= 55 ? 'Good'
-                    : metrics.overallScore >= 40 ? 'Average'
-                    : metrics.overallScore >= 20 ? 'Below Average'
-                    : 'Poor'
-                    : 'N/A'}
-                  color={metrics.totalWithLatestReport > 0
-                    ? metrics.overallScore >= 55 ? '#22c55e'
-                    : metrics.overallScore >= 40 ? '#f59e0b'
-                    : '#ef4444'
-                    : '#94a3b8'}
-                  sublabel={metrics.totalWithLatestReport > 0
-                    ? `Average Score: ${(metrics.overallScore / 20).toFixed(1)} / 5`
-                    : 'No reports'}
-                />
+                <div className="metric-card-body">
+                  <div className="metric-gauge-left">
+                    <Gauge
+                      percentage={metrics.totalWithLatestReport > 0 ? metrics.overallScore : 0}
+                      label={metrics.totalWithLatestReport > 0
+                        ? metrics.overallScore >= 85 ? 'Excellent'
+                        : metrics.overallScore >= 70 ? 'Good'
+                        : metrics.overallScore >= 50 ? 'Average'
+                        : metrics.overallScore >= 33 ? 'Below Average'
+                        : 'Poor'
+                        : 'N/A'}
+                      color={metrics.totalWithLatestReport > 0
+                        ? metrics.overallScore >= 70 ? '#22c55e'
+                        : metrics.overallScore >= 50 ? '#f59e0b'
+                        : '#ef4444'
+                        : '#94a3b8'}
+                      sublabel={metrics.totalWithLatestReport > 0
+                        ? `Score: ${(metrics.overallScore / 20).toFixed(1)} / 5`
+                        : 'No reports'}
+                    />
+                  </div>
+                  <div className="metric-text-right">
+                    <div className="metric-big-value" style={{ color: metrics.totalWithLatestReport > 0 ? (metrics.overallScore >= 70 ? '#22c55e' : metrics.overallScore >= 50 ? '#f59e0b' : '#ef4444') : '#94a3b8' }}>
+                      {metrics.totalWithLatestReport > 0 ? `${metrics.overallScore}%` : '—'}
+                    </div>
+                    <div className="metric-big-label">
+                      {metrics.totalWithLatestReport > 0
+                        ? metrics.overallScore >= 85 ? 'Excellent'
+                        : metrics.overallScore >= 70 ? 'Good'
+                        : metrics.overallScore >= 50 ? 'Average'
+                        : metrics.overallScore >= 33 ? 'Below Average'
+                        : 'Poor'
+                        : 'N/A'}
+                    </div>
+                    <div className="metric-big-sublabel">
+                      {metrics.totalWithLatestReport > 0
+                        ? `${metrics.totalWithLatestReport} rated of ${(metrics.totalResources || 0) + (metrics.totalManagers || 0)}`
+                        : 'No performance reports'}
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div
-                className="metric-card-large metric-card-clickable"
-                onClick={() => noReportResources.length > 0 && setShowNoReportModal(true)}
-                style={{ cursor: noReportResources.length > 0 ? 'pointer' : 'default' }}
+                className="metric-card-large metric-card-compact"
+                onClick={() => (metrics.totalWithoutReport?.total || noReportResources.length) > 0 && setShowNoReportModal(true)}
+                style={{ cursor: (metrics.totalWithoutReport?.total || noReportResources.length) > 0 ? 'pointer' : 'default' }}
               >
                 <h5>Total Resources</h5>
-                <div className="metric-large-value">{metrics.totalResources}</div>
-                <div className="metric-large-sublabel">
-                  
+                <div className="metric-card-body total-resources-body">
+                  <div className="metric-big-value">{metrics.totalResources + (metrics.totalManagers || 0)}</div>
+                  <div className="metric-text-block">
+                    <div className="metric-big-label">Resources &amp; Managers</div>
+                    {metrics.totalWithoutReport?.total > 0 ? (
+                      <div className="metric-missing-breakdown">
+                        <span className="highlight-missing">Without Reports: {metrics.totalWithoutReport.total}</span>
+                        <div className="missing-detail">
+                          <span className="missing-dot manager-dot"></span> Managers: {metrics.totalWithoutReport.managers}
+                          <span className="missing-dot resource-dot"></span> Resources: {metrics.totalWithoutReport.resources}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="metric-all-good">
+                        <CheckCircle size={14} color="#22c55e" /> All have reports
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -562,104 +610,9 @@ function Performance() {
               <p>Clients will appear once resources are assigned to them.</p>
             </div>
           ) : (
-            <div className="two-column-layout full-width">
-              {/* Left: Client Performance Overview */}
-              <div className="left-column">
-                <div className="table-section-header">
-                  <h3>Client Performance Overview</h3>
-                  <span className="table-count">{metrics?.resourcesPerClient?.length || 0} clients</span>
-                </div>
-
-                {/* Client Filters */}
-                <div className="resource-filters compact">
-                  <div className="filter-group">
-                    <input
-                      type="text"
-                      placeholder="Search clients..."
-                      value={clientFilters.search}
-                      onChange={e => setClientFilters({ ...clientFilters, search: e.target.value })}
-                      className="filter-input"
-                    />
-                  </div>
-                  <div className="filter-group">
-                    <select
-                      value={clientFilters.status}
-                      onChange={e => setClientFilters({ ...clientFilters, status: e.target.value })}
-                      className="filter-select"
-                    >
-                      <option value="">All Status</option>
-                      <option value="excellent">Excellent (70%+)</option>
-                      <option value="good">Good (55%+)</option>
-                      <option value="average">Average (40%+)</option>
-                      <option value="poor">Poor (&lt;40%)</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="data-table-container">
-                  <table className="perf-data-table client-table">
-                    <thead>
-                      <tr>
-                        <th>CLIENT</th>
-                        <th>TOTAL</th>
-                        <th>NEEDS UPDATES</th>
-                        <th>SCORE</th>
-                        <th>STATUS</th>
-                        <th>LAST UPDATE</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {metrics?.resourcesPerClient
-                        ?.filter(client => {
-                          const matchesSearch = !clientFilters.search || client.name?.toLowerCase().includes(clientFilters.search.toLowerCase());
-                          const matchesStatus = !clientFilters.status || 
-                            (clientFilters.status === 'excellent' && client.overallScore >= 70) ||
-                            (clientFilters.status === 'good' && client.overallScore >= 55 && client.overallScore < 70) ||
-                            (clientFilters.status === 'average' && client.overallScore >= 40 && client.overallScore < 55) ||
-                            (clientFilters.status === 'poor' && client.overallScore < 40);
-                          return matchesSearch && matchesStatus;
-                        })
-                        ?.map(client => {
-                          const statusColor = client.overallScore >= 55 ? '#22c55e' : client.overallScore >= 40 ? '#f59e0b' : '#ef4444';
-                          const statusLabel = client.overallScore >= 70 ? 'Excellent' : client.overallScore >= 55 ? 'Good' : client.overallScore >= 40 ? 'Average' : 'Poor';
-                          const scoreDisplay = client.overallScore > 0 ? `${client.overallScore}%` : '—';
-                          const formattedDate = client.lastUpdatedAt ? new Date(client.lastUpdatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
-                          return (
-                            <tr key={client.id} className="perf-table-row client-table-row" onClick={() => handleClientClick({ id: client.id, name: client.name })}>
-                              <td>
-                                <div className="resource-cell">
-                                  <div className="client-icon-small">
-                                    <Building2 size={14} />
-                                  </div>
-                                  <span className="resource-name">{client.name}</span>
-                                </div>
-                              </td>
-                              <td>{client.count}</td>
-                              <td>
-                                {client.resourcesWithoutUpdates > 0 ? (
-                                  <span className="highlight-missing">{client.resourcesWithoutUpdates}</span>
-                                ) : (
-                                  <span>0</span>
-                                )}
-                              </td>
-                              <td>{scoreDisplay}</td>
-                              <td>
-                                <div className="status-cell">
-                                  <span className="status-dot" style={{ background: statusColor }}></span>
-                                  <span>{statusLabel}</span>
-                                </div>
-                              </td>
-                              <td>{formattedDate}</td>
-                            </tr>
-                          );
-                        })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Right: All Resources with Filters */}
-              <div className="right-column">
+            <div className="full-width">
+              {/* All Resources with Filters */}
+              <div className="all-resources-section">
                 <div className="table-section-header">
                   <h3>All Resources</h3>
                   <span className="table-count">{allResources.length} resources</span>
@@ -694,10 +647,12 @@ function Performance() {
                       onChange={e => setResourceFilters({ ...resourceFilters, status: e.target.value })}
                       className="filter-select"
                     >
-                      <option value="">All Status</option>
-                      <option value="green">Green</option>
-                      <option value="amber">Amber</option>
-                      <option value="red">Red</option>
+                      <option value="">All Recommendations</option>
+                      <option value="continue_strong">Continue (Strong)</option>
+                      <option value="continue_meets">Continue (Meets)</option>
+                      <option value="continue_improvement">Continue (Plan)</option>
+                      <option value="role_change">Role Change</option>
+                      <option value="replacement">Replacement/Backfill</option>
                       <option value="none">No Report</option>
                     </select>
                   </div>
@@ -709,9 +664,11 @@ function Performance() {
                       <tr>
                         <th>RESOURCE</th>
                         <th>CLIENT</th>
-                        <th>ROLE</th>
-                        <th>STATUS</th>
+                        <th>ROLE / TEAM</th>
+                        <th>RECOMMENDATION</th>
+                        <th>RATING</th>
                         <th>LAST REPORT</th>
+                        <th>ACTIONS</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -720,16 +677,14 @@ function Performance() {
                           const matchesSearch = !resourceFilters.search || r.username?.toLowerCase().includes(resourceFilters.search.toLowerCase());
                           const matchesClient = !resourceFilters.client || r.client_id === resourceFilters.client;
                           const matchesStatus = !resourceFilters.status || 
-                            (resourceFilters.status === 'none' ? !r.latest_report : r.latest_report?.overall_status === resourceFilters.status);
+                            (resourceFilters.status === 'none' ? !r.latest_report : r.latest_report?.recommendation === resourceFilters.status);
                           return matchesSearch && matchesClient && matchesStatus;
                         })
                         .map(resource => {
-                          const status = resource.latest_report?.overall_status;
-                          const statusColor = status === 'green' ? '#22c55e' : status === 'amber' ? '#f59e0b' : status === 'red' ? '#ef4444' : '#94a3b8';
-                          const statusLabel = status ? status.charAt(0).toUpperCase() + status.slice(1) : 'No Report';
                           const clientName = clients.find(c => c.id === resource.client_id)?.name || '—';
-                          const lastReportDate = resource.latest_report?.updatedAt ? 
-                            new Date(resource.latest_report.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
+                          const lastReportDate = resource.latest_report?.updatedAt 
+                            ? `${new Date(resource.latest_report.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · ${resource.latest_report.quarter ? (resource.latest_report.quarter.toString().startsWith('Q') ? resource.latest_report.quarter : `Q${resource.latest_report.quarter}`) : '—'} ${resource.latest_report.year || '—'}`
+                            : '—';
                           return (
                             <tr key={resource.id} className="perf-table-row" onClick={() => handleResourceClick(resource)}>
                               <td>
@@ -741,14 +696,54 @@ function Performance() {
                                 </div>
                               </td>
                               <td>{clientName}</td>
-                              <td>{resource.role_name || 'Resource'}</td>
                               <td>
-                                <div className="status-cell">
-                                  <span className="status-dot" style={{ background: statusColor }}></span>
-                                  <span>{statusLabel}</span>
+                                <span className="role-team-text">
+                                  {resource.latest_report?.role_team || resource.role_name || '—'}
+                                </span>
+                              </td>
+                              <td>
+                                <span className={`recommendation-badge ${resource.latest_report?.recommendation || 'none'}`}>
+                                  {(() => {
+                                    const rec = resource.latest_report?.recommendation;
+                                    if (!rec) return '—';
+                                    const recMap = {
+                                      continue_strong: 'Continue (Strong)',
+                                      continue_meets: 'Continue (Meets)',
+                                      continue_improvement: 'Continue (Plan)',
+                                      role_change: 'Role Change Recommended',
+                                      replacement: 'Replacement/Backfill Recommended'
+                                    };
+                                    return recMap[rec] || rec;
+                                  })()}
+                                </span>
+                              </td>
+                              <td>
+                                <div className="rating-display">
+                                  {resource.latest_report?.rating ? (
+                                    <>
+                                      <span className="rating-value">{resource.latest_report.rating}</span>
+                                      <span className="rating-stars">{'★'.repeat(Math.round(resource.latest_report.rating))}{'☆'.repeat(5 - Math.round(resource.latest_report.rating))}</span>
+                                    </>
+                                  ) : (
+                                    <span className="rating-empty">—</span>
+                                  )}
                                 </div>
                               </td>
                               <td>{lastReportDate}</td>
+                              <td>
+                                <div className="action-buttons">
+                                  <button
+                                    className="action-btn view-btn"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleResourceClick(resource);
+                                    }}
+                                    title="View Details"
+                                  >
+                                    <Eye size={22} />
+                                  </button>
+                                </div>
+                              </td>
                             </tr>
                           );
                         })}
@@ -767,41 +762,75 @@ function Performance() {
           {/* Dashboard Metrics for selected client */}
           {metrics && selectedClient && (
             <div className="metrics-cards-row three-col">
-              <div className="metric-card-large">
+              <div className="metric-card-large metric-card-compact">
                 <h5>Overall Performance</h5>
-                <Gauge
-                  percentage={metrics.totalWithLatestReport > 0 ? metrics.overallScore : 0}
-                  label={metrics.totalWithLatestReport > 0
-                    ? metrics.overallScore >= 70 ? 'Excellent'
-                    : metrics.overallScore >= 55 ? 'Good'
-                    : metrics.overallScore >= 40 ? 'Average'
-                    : metrics.overallScore >= 20 ? 'Below Average'
-                    : 'Poor'
-                    : 'N/A'}
-                  color={metrics.totalWithLatestReport > 0
-                    ? metrics.overallScore >= 55 ? '#22c55e'
-                    : metrics.overallScore >= 40 ? '#f59e0b'
-                    : '#ef4444'
-                    : '#94a3b8'}
-                  sublabel={metrics.totalWithLatestReport > 0
-                    ? `Average Score: ${(metrics.overallScore / 20).toFixed(1)} / 5`
-                    : 'No reports'}
-                />
+                <div className="metric-card-body">
+                  <div className="metric-gauge-left">
+                    <Gauge
+                      percentage={metrics.totalWithLatestReport > 0 ? metrics.overallScore : 0}
+                      label={metrics.totalWithLatestReport > 0
+                        ? metrics.overallScore >= 85 ? 'Excellent'
+                        : metrics.overallScore >= 70 ? 'Good'
+                        : metrics.overallScore >= 50 ? 'Average'
+                        : metrics.overallScore >= 33 ? 'Below Average'
+                        : 'Poor'
+                        : 'N/A'}
+                      color={metrics.totalWithLatestReport > 0
+                        ? metrics.overallScore >= 70 ? '#22c55e'
+                        : metrics.overallScore >= 50 ? '#f59e0b'
+                        : '#ef4444'
+                        : '#94a3b8'}
+                      sublabel={metrics.totalWithLatestReport > 0
+                        ? `Score: ${(metrics.overallScore / 20).toFixed(1)} / 5`
+                        : 'No reports'}
+                    />
+                  </div>
+                  <div className="metric-text-right">
+                    <div className="metric-big-value" style={{ color: metrics.totalWithLatestReport > 0 ? (metrics.overallScore >= 70 ? '#22c55e' : metrics.overallScore >= 50 ? '#f59e0b' : '#ef4444') : '#94a3b8' }}>
+                      {metrics.totalWithLatestReport > 0 ? `${metrics.overallScore}%` : '—'}
+                    </div>
+                    <div className="metric-big-label">
+                      {metrics.totalWithLatestReport > 0
+                        ? metrics.overallScore >= 85 ? 'Excellent'
+                        : metrics.overallScore >= 70 ? 'Good'
+                        : metrics.overallScore >= 50 ? 'Average'
+                        : metrics.overallScore >= 33 ? 'Below Average'
+                        : 'Poor'
+                        : 'N/A'}
+                    </div>
+                    <div className="metric-big-sublabel">
+                      {metrics.totalWithLatestReport > 0
+                        ? `${metrics.totalWithLatestReport} rated of ${(metrics.totalResources || 0) + (metrics.totalManagers || 0)}`
+                        : 'No performance reports'}
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div
-                className="metric-card-large metric-card-clickable"
-                onClick={() => noReportResources.length > 0 && setShowNoReportModal(true)}
-                style={{ cursor: noReportResources.length > 0 ? 'pointer' : 'default' }}
+                className="metric-card-large metric-card-compact"
+                onClick={() => (metrics.totalWithoutReport?.total || noReportResources.length) > 0 && setShowNoReportModal(true)}
+                style={{ cursor: (metrics.totalWithoutReport?.total || noReportResources.length) > 0 ? 'pointer' : 'default' }}
               >
                 <h5>Total Resources</h5>
-                <div className="metric-large-value">{metrics.totalResources}</div>
-                <div className="metric-large-sublabel">
-                  {metrics.totalWithLatestReport > 0 ? (
-                    `${Math.round((metrics.totalWithLatestReport / metrics.totalResources) * 100)}% of client resources`
-                  ) : (
-                    <span className="highlight-missing">{noReportResources.length} without feedback</span>
-                  )}
+                <div className="metric-card-body total-resources-body">
+                  <div className="metric-big-value">{metrics.totalResources + (metrics.totalManagers || 0)}</div>
+                  <div className="metric-text-block">
+                    <div className="metric-big-label">Resources &amp; Managers</div>
+                    {metrics.totalWithoutReport?.total > 0 ? (
+                      <div className="metric-missing-breakdown">
+                        <span className="highlight-missing">Without Reports: {metrics.totalWithoutReport.total}</span>
+                        <div className="missing-detail">
+                          <span className="missing-dot manager-dot"></span> Managers: {metrics.totalWithoutReport.managers}
+                          <span className="missing-dot resource-dot"></span> Resources: {metrics.totalWithoutReport.resources}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="metric-all-good">
+                        <CheckCircle size={14} color="#22c55e" /> All have reports
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -878,7 +907,11 @@ function Performance() {
                               <span className="resource-name">{resource.username}</span>
                             </div>
                           </td>
-                          <td>{resource.role_name || 'Resource'}</td>
+                          <td>
+                            <span className={`role-badge ${resource.role_name?.toLowerCase() === 'manager' ? 'manager' : 'resource'}`}>
+                              {resource.role_name || 'Resource'}
+                            </span>
+                          </td>
                           <td>
                             {lr?.overall_status ? (
                               <div className="status-cell">
@@ -928,14 +961,39 @@ function Performance() {
             </div>
           ) : (
             <div className="reports-section">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+              <div className="reports-header">
                 <h3>Performance Reports — {selectedResource?.username}</h3>
-                {canManagePerformance() && (
-                  <button className="btn-primary" onClick={openUpload}>
-                    <Upload size={16} />
-                    Upload Report
-                  </button>
-                )}
+                <div className="reports-filters">
+                  <div className="filter-group">
+                    <select
+                      value={reportFilters.quarter}
+                      onChange={e => setReportFilters({ ...reportFilters, quarter: e.target.value })}
+                      className="filter-select"
+                    >
+                      <option value="">All Quarters</option>
+                      <option value="Q1">Q1</option>
+                      <option value="Q2">Q2</option>
+                      <option value="Q3">Q3</option>
+                      <option value="Q4">Q4</option>
+                    </select>
+                  </div>
+                  <div className="filter-group">
+                    <select
+                      value={reportFilters.year}
+                      onChange={e => setReportFilters({ ...reportFilters, year: e.target.value })}
+                      className="filter-select"
+                    >
+                      <option value="">All Years</option>
+                      {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                  </div>
+                  {canManagePerformance && (
+                    <button className="btn-primary" onClick={openUpload}>
+                      <Upload size={16} />
+                      Upload Report
+                    </button>
+                  )}
+                </div>
               </div>
               {reports.length === 0 ? (
                 <div className="empty-state">
@@ -944,47 +1002,78 @@ function Performance() {
                   <p>Upload a quarterly performance report to get started.</p>
                 </div>
               ) : (
-                <div className="report-cards">
-                  {reports.map(report => (
-                    <div key={report.id} className="report-card">
-                      <div className="report-card-header" onClick={() => { setSelectedReport(report); setShowDetail(true); }}>
-                        <div className="report-info">
-                          <h4>{report.quarter} {report.year}</h4>
-                          <span className="report-date">{formatDate(report.created_at)}</span>
-                        </div>
-                        <div className="report-status-badge" style={{ background: statusColor(report.overall_status) + '20', color: statusColor(report.overall_status) }}>
-                          {report.overall_status?.toUpperCase() || 'N/A'}
-                        </div>
-                      </div>
-                      <div className="report-card-body" onClick={() => { setSelectedReport(report); setShowDetail(true); }}>
-                        <div className="report-summary-row">
-                          <span>Delivery: <strong>{statusLabel(report.delivery, { yes: 'Yes', mostly: 'Mostly', not: 'Not' })}</strong></span>
-                          <span>Quality: <strong>{statusLabel(report.quality, { good: 'Good', mixed: 'Mixed', poor: 'Poor' })}</strong></span>
-                          <span>Rework: <strong>{statusLabel(report.rework, { high: 'High', medium: 'Medium', low: 'Low' })}</strong></span>
-                        </div>
-                        <div className="report-summary-row">
-                          <span>Comm: <strong>{statusLabel(report.communication, { effective: 'Effective', needs_improvement: 'Needs Improvement' })}</strong></span>
-                          <span>Rec: <strong>{statusLabel(report.recommendation, {
-                            continue_strong: 'Continue (Strong)',
-                            continue_meets: 'Continue (Meets)',
-                            continue_improvement: 'Continue (Improvement Plan)',
-                            replacement: 'Replacement',
-                            role_change: 'Role Change'
-                          })}</strong></span>
-                        </div>
-                      </div>
-                      {canManagePerformance() && (
-                        <div className="report-card-actions">
-                          <button className="btn-icon btn-edit" onClick={(e) => { e.stopPropagation(); openEditReport(report); }} title="Edit">
-                            <Pencil size={14} />
-                          </button>
-                          <button className="btn-icon btn-danger" onClick={(e) => { e.stopPropagation(); handleDeleteReport(report.id); }} title="Delete">
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                <div className="data-table-container">
+                  <table className="perf-data-table reports-table">
+                    <thead>
+                      <tr>
+                        <th>QUARTER</th>
+                        <th>YEAR</th>
+                        <th>STATUS</th>
+                        <th>SCORECARD</th>
+                        <th>RECOMMENDATION</th>
+                        <th>ACTIONS</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reports
+                        .filter(r => !reportFilters.quarter || r.quarter === reportFilters.quarter)
+                        .filter(r => !reportFilters.year || r.year.toString() === reportFilters.year)
+                        .map(report => (
+                        <tr 
+                          key={report.id} 
+                          className="perf-table-row report-row" 
+                          onClick={() => { setSelectedReport(report); setShowDetail(true); }}
+                        >
+                          <td>
+                            <span className="report-quarter">{report.quarter}</span>
+                          </td>
+                          <td>{report.year}</td>
+                          <td>
+                            <span 
+                              className="status-badge" 
+                              style={{ 
+                                background: statusColor(report.overall_status) + '20', 
+                                color: statusColor(report.overall_status) 
+                              }}
+                            >
+                              {report.overall_status?.toUpperCase() || 'N/A'}
+                            </span>
+                          </td>
+                          <td>
+                            <div className="scorecard-summary">
+                              <span>D: {statusLabel(report.delivery, { yes: 'Y', mostly: 'M', not: 'N' })}</span>
+                              <span>Q: {statusLabel(report.quality, { good: 'G', mixed: 'M', poor: 'P' })}</span>
+                              <span>R: {statusLabel(report.rework, { high: 'H', medium: 'M', low: 'L' })}</span>
+                              <span>C: {statusLabel(report.communication, { effective: 'E', needs_improvement: 'N' })}</span>
+                            </div>
+                          </td>
+                          <td>
+                            {statusLabel(report.recommendation, {
+                              continue_strong: 'Continue (Strong)',
+                              continue_meets: 'Continue (Meets)',
+                              continue_improvement: 'Continue (Plan)',
+                              replacement: 'Replacement',
+                              role_change: 'Role Change'
+                            })}
+                          </td>
+                          <td>
+                            <div className="action-buttons">
+                              <button
+                                className="action-btn view-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openEditReport(report);
+                                }}
+                                title="Edit Report"
+                              >
+                                <Pencil size={16} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
@@ -1209,6 +1298,29 @@ function Performance() {
               <button className="btn-icon" onClick={() => setShowDetail(false)}><X size={18} /></button>
             </div>
             <div className="detail-body">
+              {/* Resource Info */}
+              <div className="detail-section">
+                <h4>Resource Information</h4>
+                <div className="detail-grid">
+                  <div className="detail-item">
+                    <label>Resource Name</label>
+                    <strong>{selectedReport.resource_name || selectedResource?.username || '—'}</strong>
+                  </div>
+                  <div className="detail-item">
+                    <label>Role / Team</label>
+                    <strong>{selectedReport.role_team || '—'}</strong>
+                  </div>
+                  <div className="detail-item">
+                    <label>Manager</label>
+                    <strong>{selectedReport.manager_name || '—'}</strong>
+                  </div>
+                  <div className="detail-item">
+                    <label>Prepared By</label>
+                    <strong>{selectedReport.prepared_by || '—'}</strong>
+                  </div>
+                </div>
+              </div>
+
               <div className="detail-section">
                 <h4>Overall Status</h4>
                 <span className="status-badge-large" style={{ background: statusColor(selectedReport.overall_status) + '20', color: statusColor(selectedReport.overall_status) }}>
@@ -1218,48 +1330,70 @@ function Performance() {
               </div>
 
               <div className="detail-section">
-                <h4>Scorecard</h4>
+                <h4>Performance Scorecard</h4>
                 <div className="detail-grid">
                   <div className="detail-item">
                     <label>Delivery</label>
                     <strong>{statusLabel(selectedReport.delivery, { yes: 'Yes', mostly: 'Mostly', not: 'Not' })}</strong>
-                    <p>{selectedReport.delivery_comments || ''}</p>
+                    <p>{selectedReport.delivery_comments || '—'}</p>
                   </div>
                   <div className="detail-item">
                     <label>Quality</label>
                     <strong>{statusLabel(selectedReport.quality, { good: 'Good', mixed: 'Mixed', poor: 'Poor' })}</strong>
-                    <p>{selectedReport.quality_comments || ''}</p>
+                    <p>{selectedReport.quality_comments || '—'}</p>
                   </div>
                   <div className="detail-item">
                     <label>Rework</label>
                     <strong>{statusLabel(selectedReport.rework, { high: 'High', medium: 'Medium', low: 'Low' })}</strong>
-                    <p>{selectedReport.rework_comments || ''}</p>
+                    <p>{selectedReport.rework_comments || '—'}</p>
                   </div>
                   <div className="detail-item">
                     <label>Communication</label>
                     <strong>{statusLabel(selectedReport.communication, { effective: 'Effective', needs_improvement: 'Needs Improvement' })}</strong>
-                    <p>{selectedReport.communication_comments || ''}</p>
+                    <p>{selectedReport.communication_comments || '—'}</p>
                   </div>
                 </div>
               </div>
 
               <div className="detail-section">
                 <h4>Feedback</h4>
-                <p><strong>Strengths:</strong> {selectedReport.strengths || '—'}</p>
-                <p><strong>Areas of Improvement:</strong> {selectedReport.areas_of_improvement || '—'}</p>
-                <p><strong>Support Needed:</strong> {selectedReport.support_needed || '—'}</p>
+                <div className="feedback-item">
+                  <label>Strengths / Wins</label>
+                  <p>{selectedReport.strengths || '—'}</p>
+                </div>
+                <div className="feedback-item">
+                  <label>Areas of Improvement</label>
+                  <p>{selectedReport.areas_of_improvement || '—'}</p>
+                </div>
+                <div className="feedback-item">
+                  <label>Comments</label>
+                  <p>{selectedReport.comments || '—'}</p>
+                </div>
+                <div className="feedback-item">
+                  <label>Support Needed</label>
+                  <p>{selectedReport.support_needed || '—'}</p>
+                </div>
               </div>
 
               <div className="detail-section">
                 <h4>Recommendation</h4>
-                <p className="detail-text">{statusLabel(selectedReport.recommendation, {
-                  continue_strong: 'Continue (Strong)',
-                  continue_meets: 'Continue (Meets Expectations)',
-                  continue_improvement: 'Continue (Improvement Plan)',
-                  replacement: 'Replacement / Backfill Recommended',
-                  role_change: 'Role Change Recommended'
-                })}</p>
+                <div className="recommendation-box" style={{ 
+                  background: selectedReport.recommendation?.includes('continue') ? '#dcfce7' : selectedReport.recommendation?.includes('improvement') ? '#fef3c7' : '#fee2e2',
+                  color: selectedReport.recommendation?.includes('continue') ? '#166534' : selectedReport.recommendation?.includes('improvement') ? '#92400e' : '#991b1b',
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  fontWeight: 600
+                }}>
+                  {statusLabel(selectedReport.recommendation, {
+                    continue_strong: 'Continue (Strong)',
+                    continue_meets: 'Continue (Meets Expectations)',
+                    continue_improvement: 'Continue (Improvement Plan)',
+                    replacement: 'Replacement / Backfill Recommended',
+                    role_change: 'Role Change Recommended'
+                  })}
+                </div>
               </div>
+
             </div>
           </div>
         </div>
@@ -1270,37 +1404,111 @@ function Performance() {
         <div className="modal-overlay" onClick={() => setShowNoReportModal(false)}>
           <div className="modal-content no-report-modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Resources Without Feedback</h2>
+              <div className="modal-header-left">
+                <h2>Without Performance Reports</h2>
+                <span className="modal-count">{noReportResources.length} total</span>
+              </div>
               <button className="btn-icon" onClick={() => setShowNoReportModal(false)}><X size={18} /></button>
             </div>
+            
+            <div className="modal-filters">
+              <div className="modal-search">
+                <Search size={16} className="search-icon" />
+                <input
+                  type="text"
+                  placeholder="Search resources or managers..."
+                  value={noReportSearch}
+                  onChange={e => setNoReportSearch(e.target.value)}
+                  className="modal-search-input"
+                />
+                {noReportSearch && (
+                  <button className="clear-search" onClick={() => setNoReportSearch('')}>
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+              
+              <div className="modal-role-toggle">
+                <button
+                  className={`role-toggle-btn ${noReportRoleFilter === 'all' ? 'active' : ''}`}
+                  onClick={() => setNoReportRoleFilter('all')}
+                >
+                  All
+                </button>
+                <button
+                  className={`role-toggle-btn ${noReportRoleFilter === 'manager' ? 'active' : ''}`}
+                  onClick={() => setNoReportRoleFilter('manager')}
+                >
+                  <Users size={14} />
+                  Managers
+                </button>
+                <button
+                  className={`role-toggle-btn ${noReportRoleFilter === 'resource' ? 'active' : ''}`}
+                  onClick={() => setNoReportRoleFilter('resource')}
+                >
+                  <User size={14} />
+                  Resources
+                </button>
+              </div>
+            </div>
+            
             <div className="modal-body no-report-list">
-              {noReportResources.length === 0 ? (
-                <div className="empty-state compact">
-                  <CheckCircle size={32} color="#22c55e" />
-                  <p>All resources have feedback.</p>
-                </div>
-              ) : (
-                <div className="no-report-items">
-                  {noReportResources.map(resource => (
-                    <div
-                      key={resource.id}
-                      className="no-report-item"
-                      onClick={() => goToResourceFromModal(resource)}
-                    >
-                      <div className="resource-cell">
-                        <div className="resource-avatar" style={{ background: getAvatarColor(resource.username) }}>
-                          {getInitials(resource.username)}
-                        </div>
-                        <div className="no-report-info">
-                          <span className="resource-name">{resource.username}</span>
-                          <span className="resource-client">{resource.client_name}</span>
-                        </div>
-                      </div>
-                      <ChevronLeft size={16} style={{ transform: 'rotate(180deg)', color: '#94a3b8' }} />
+              {(() => {
+                const filtered = noReportResources.filter(r => {
+                  const matchesSearch = !noReportSearch || 
+                    r.username?.toLowerCase().includes(noReportSearch.toLowerCase()) ||
+                    r.client_name?.toLowerCase().includes(noReportSearch.toLowerCase());
+                  const matchesRole = noReportRoleFilter === 'all' || 
+                    r.role_name?.toLowerCase() === noReportRoleFilter;
+                  return matchesSearch && matchesRole;
+                });
+                
+                const managersCount = filtered.filter(r => r.role_name?.toLowerCase() === 'manager').length;
+                const resourcesCount = filtered.filter(r => r.role_name?.toLowerCase() === 'resource').length;
+                
+                return filtered.length === 0 ? (
+                  <div className="empty-state compact">
+                    <CheckCircle size={32} color="#22c55e" />
+                    <p>{noReportResources.length === 0 ? 'All resources and managers have feedback.' : 'No matches found for your filters.'}</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="no-report-summary">
+                      <span className="summary-item managers">
+                        <span className="dot manager-dot"></span>
+                        {managersCount} Manager{managersCount !== 1 ? 's' : ''}
+                      </span>
+                      <span className="summary-item resources">
+                        <span className="dot resource-dot"></span>
+                        {resourcesCount} Resource{resourcesCount !== 1 ? 's' : ''}
+                      </span>
                     </div>
-                  ))}
-                </div>
-              )}
+                    <div className="no-report-items">
+                      {filtered.map(resource => (
+                        <div
+                          key={resource.id}
+                          className="no-report-item"
+                          onClick={() => goToResourceFromModal(resource)}
+                        >
+                          <div className="resource-cell">
+                            <div className="resource-avatar" style={{ background: getAvatarColor(resource.username) }}>
+                              {getInitials(resource.username)}
+                            </div>
+                            <div className="no-report-info">
+                              <span className="resource-name">{resource.username}</span>
+                              <span className="resource-client">{resource.client_name}</span>
+                              <span className={`role-badge ${resource.role_name?.toLowerCase() === 'manager' ? 'manager' : 'resource'}`}>
+                                {resource.role_name || 'Resource'}
+                              </span>
+                            </div>
+                          </div>
+                          <ChevronLeft size={16} style={{ transform: 'rotate(180deg)', color: '#94a3b8' }} />
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           </div>
         </div>

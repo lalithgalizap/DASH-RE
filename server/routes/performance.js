@@ -30,12 +30,14 @@ router.get('/clients', authenticate, async (req, res) => {
     
     const isAdmin = user.role_name === 'Admin' || user.role_name === 'Superuser';
     const isCSP = user.role_name === 'CSP';
+    const hasGlobalPerformance = user.permissions?.includes('can_view_global_performance');
+    const canViewAll = isAdmin || isCSP || hasGlobalPerformance;
     
     // Filter to only Manager/Resource users that have a client assigned
     const mrUsers = allUsers.filter(u => u.role_name === 'Manager' || u.role_name === 'Resource');
     
-    if (isAdmin || isCSP) {
-      // Admin/CSP sees all clients that have at least one Manager or Resource assigned
+    if (canViewAll) {
+      // Admin/CSP/Global view sees all clients that have at least one Manager or Resource assigned
       const clientIds = new Set(mrUsers.filter(u => u.client_id).map(u => u.client_id));
       const clients = allClients.filter(c => clientIds.has(c.id));
       return res.json(clients);
@@ -73,10 +75,13 @@ router.get('/metrics', authenticate, async (req, res) => {
     const isAdmin = user.role_name === 'Admin' || user.role_name === 'Superuser';
     const isCSP = user.role_name === 'CSP';
     const isManager = user.role_name === 'Manager';
+    const hasGlobalPerformance = user.permissions?.includes('can_view_global_performance');
+    const canViewAll = isAdmin || isCSP || hasGlobalPerformance;
 
     // Filter users based on role
     let relevantUsers = allUsers.filter(u => u.role_name === 'Manager' || u.role_name === 'Resource');
-    if (isManager) {
+    if (isManager && !canViewAll) {
+      // Manager sees self + assigned resources
       relevantUsers = relevantUsers.filter(u => u.manager_id === user.id || u.id === user.id);
     }
 
@@ -90,21 +95,27 @@ router.get('/metrics', authenticate, async (req, res) => {
       relevantUsers = relevantUsers.filter(u => u.client_id === client_id);
     }
 
-    // Filter reports to only those for relevant resources
+    // Track all relevant user IDs (both managers and resources)
+    const relevantUserIds = new Set(relevantUsers.map(u => u.id));
+    // Track resource IDs specifically for report filtering
     const relevantResourceIds = new Set(relevantUsers.filter(u => u.role_name === 'Resource').map(u => u.id));
-    let reports = allReports.filter(r => relevantResourceIds.has(r.resource_id?.toString?.() || r.resource_id));
+    // Track manager IDs
+    const relevantManagerIds = new Set(relevantUsers.filter(u => u.role_name === 'Manager').map(u => u.id));
 
-    // Latest report per resource (by createdAt desc)
-    const latestByResource = {};
+    // Get reports for resources AND managers (if managers have reports)
+    let reports = allReports.filter(r => relevantUserIds.has(r.resource_id?.toString?.() || r.resource_id));
+
+    // Latest report per user (by createdAt desc)
+    const latestByUser = {};
     reports.forEach(r => {
       const rid = r.resource_id?.toString?.() || r.resource_id;
-      if (!latestByResource[rid] || new Date(r.createdAt) > new Date(latestByResource[rid].createdAt)) {
-        latestByResource[rid] = r;
+      if (!latestByUser[rid] || new Date(r.createdAt) > new Date(latestByUser[rid].createdAt)) {
+        latestByUser[rid] = r;
       }
     });
-    const latestReports = Object.values(latestByResource);
+    const latestReports = Object.values(latestByUser);
 
-    // Status distribution (latest report per resource only)
+    // Status distribution (latest report per user)
     const statusCounts = { red: 0, amber: 0, green: 0, unknown: 0 };
     latestReports.forEach(r => {
       const st = r.overall_status;
@@ -112,30 +123,43 @@ router.get('/metrics', authenticate, async (req, res) => {
       else statusCounts.unknown++;
     });
 
-    // Weighted overall score (Green=100, Amber=50, Red=0, N/A=0)
-    const scoreWeights = { green: 100, amber: 50, red: 0, unknown: 0 };
+    // Weighted overall score (Green=100, Amber=66.66, Red=33.33, N/A=0)
+    const scoreWeights = { green: 100, amber: 66.66, red: 33.33, unknown: 0 };
     const overallScore = latestReports.length > 0
       ? Math.round(latestReports.reduce((sum, r) => sum + (scoreWeights[r.overall_status] || 0), 0) / latestReports.length)
       : 0;
 
-    // Resources without any report
-    const resourceIdsWithReport = new Set(Object.keys(latestByResource));
+    // Users without any report
+    const userIdsWithReport = new Set(Object.keys(latestByUser));
     const resourcesWithoutReport = relevantUsers
-      .filter(u => u.role_name === 'Resource' && !resourceIdsWithReport.has(u.id))
+      .filter(u => u.role_name === 'Resource' && !userIdsWithReport.has(u.id))
       .map(u => ({
         id: u.id,
         username: u.username,
+        role_name: u.role_name,
+        client_id: u.client_id,
+        client_name: clients.find(c => c.id === u.client_id)?.name || ''
+      }));
+
+    const managersWithoutReport = relevantUsers
+      .filter(u => u.role_name === 'Manager' && !userIdsWithReport.has(u.id))
+      .map(u => ({
+        id: u.id,
+        username: u.username,
+        role_name: u.role_name,
         client_id: u.client_id,
         client_name: clients.find(c => c.id === u.client_id)?.name || ''
       }));
 
     // Count resources per client with detailed metrics
     const resourcesPerClient = clients.map(c => {
-      const clientResources = relevantUsers.filter(u => u.client_id === c.id && u.role_name === 'Resource');
-      const clientResourceIds = new Set(clientResources.map(u => u.id));
+      const clientUsers = relevantUsers.filter(u => u.client_id === c.id);
+      const clientResources = clientUsers.filter(u => u.role_name === 'Resource');
+      const clientManagers = clientUsers.filter(u => u.role_name === 'Manager');
+      const clientUserIds = new Set(clientUsers.map(u => u.id));
 
       // Latest reports for this client
-      const clientLatestReports = latestReports.filter(r => clientResourceIds.has(r.resource_id?.toString?.() || r.resource_id));
+      const clientLatestReports = latestReports.filter(r => clientUserIds.has(r.resource_id?.toString?.() || r.resource_id));
 
       // Status distribution for this client
       const clientStatusCounts = { red: 0, amber: 0, green: 0, unknown: 0 };
@@ -146,13 +170,14 @@ router.get('/metrics', authenticate, async (req, res) => {
       });
 
       // Weighted overall score for this client
-      const scoreWeights = { green: 100, amber: 50, red: 0, unknown: 0 };
+      const clientScoreWeights = { green: 100, amber: 66.66, red: 33.33, unknown: 0 };
       const clientOverallScore = clientLatestReports.length > 0
-        ? Math.round(clientLatestReports.reduce((sum, r) => sum + (scoreWeights[r.overall_status] || 0), 0) / clientLatestReports.length)
+        ? Math.round(clientLatestReports.reduce((sum, r) => sum + (clientScoreWeights[r.overall_status] || 0), 0) / clientLatestReports.length)
         : 0;
 
-      // Resources without updates for this client
+      // Users without updates for this client
       const clientResourcesWithoutUpdates = resourcesWithoutReport.filter(r => r.client_id === c.id).length;
+      const clientManagersWithoutUpdates = managersWithoutReport.filter(r => r.client_id === c.id).length;
 
       // Last updated for this client
       const clientLastUpdatedAt = clientLatestReports.length > 0
@@ -165,8 +190,11 @@ router.get('/metrics', authenticate, async (req, res) => {
       return {
         name: c.name,
         count: clientResources.length,
+        managerCount: clientManagers.length,
+        totalCount: clientResources.length + clientManagers.length,
         id: c.id,
         resourcesWithoutUpdates: clientResourcesWithoutUpdates,
+        managersWithoutUpdates: clientManagersWithoutUpdates,
         overallScore: clientOverallScore,
         lastUpdatedAt: clientLastUpdatedAt,
         statusDistribution: {
@@ -176,7 +204,7 @@ router.get('/metrics', authenticate, async (req, res) => {
           unknown: clientStatusCounts.unknown
         }
       };
-    }).filter(c => c.count > 0);
+    }).filter(c => c.count > 0 || c.managerCount > 0);
 
     // Quarter distribution
     const quarterCounts = {};
@@ -196,9 +224,16 @@ router.get('/metrics', authenticate, async (req, res) => {
     res.json({
       totalClients: clients.length,
       totalResources: relevantUsers.filter(u => u.role_name === 'Resource').length,
+      totalManagers: relevantUsers.filter(u => u.role_name === 'Manager').length,
       totalReports: reports.length,
       totalWithLatestReport: latestReports.length,
       resourcesWithoutReport,
+      managersWithoutReport,
+      totalWithoutReport: {
+        resources: resourcesWithoutReport.length,
+        managers: managersWithoutReport.length,
+        total: resourcesWithoutReport.length + managersWithoutReport.length
+      },
       overallScore,
       lastUpdatedAt,
       resourcesPerClient,
@@ -225,26 +260,92 @@ router.get('/resources', authenticate, async (req, res) => {
     const isAdmin = user.role_name === 'Admin' || user.role_name === 'Superuser';
     const isCSP = user.role_name === 'CSP';
     const isManager = user.role_name === 'Manager';
+    const hasGlobalPerformance = user.permissions?.includes('can_view_global_performance');
+    const canViewAll = isAdmin || isCSP || hasGlobalPerformance;
     
     let resources;
     if (client_id) {
       // Get resources for specific client
-      resources = await dbAdapter.getUsersByClient(client_id, 'Resource');
+      const allUsers = await dbAdapter.getAllUsers();
+      resources = allUsers.filter(u => u.client_id === client_id && u.role_name === 'Resource');
+      // Include managers for admin/CSP/global view
+      if (canViewAll) {
+        const clientManagers = allUsers.filter(u => u.client_id === client_id && u.role_name === 'Manager');
+        resources = [...resources, ...clientManagers];
+      }
     } else {
-      // Get all resources across all clients
+      // Get all resources and managers across all clients
       const allUsers = await dbAdapter.getAllUsers();
       resources = allUsers.filter(u => u.role_name === 'Resource');
+      // Include managers for admin/CSP/global view
+      if (canViewAll) {
+        const managers = allUsers.filter(u => u.role_name === 'Manager');
+        resources = [...resources, ...managers];
+      }
     }
     
-    if (isManager) {
-      // Manager only sees their own resources
-      resources = resources.filter(r => r.manager_id === user.id);
-    } else if (!isAdmin && !isCSP) {
+    if (isManager && !canViewAll) {
+      // Manager only sees their own resources + self
+      resources = resources.filter(r => r.manager_id === user.id || r.id === user.id);
+      // Ensure manager themselves is in the list so they can see their own reports
+      if (!resources.some(r => r.id === user.id)) {
+        if (!client_id || user.client_id === client_id) {
+          resources = [...resources, user];
+        }
+      }
+    } else if (!canViewAll) {
       // Resource user only sees themselves
       resources = resources.filter(r => r.id === user.id);
     }
     
-    // Fetch latest confirmed report for each resource (sorted by createdAt desc)
+    // Helper function to calculate rating out of 5 based on report metrics
+    const calculateRating = (report) => {
+      if (!report) return null;
+      
+      // Score mapping for each metric (higher is better)
+      const scores = {
+        // Delivery: yes=5, mostly=3, not=1
+        delivery: { yes: 5, mostly: 3, not: 1 },
+        // Quality: good=5, mixed=3, poor=1
+        quality: { good: 5, mixed: 3, poor: 1 },
+        // Rework: low=5, medium=3, high=1 (inverse - lower rework is better)
+        rework: { low: 5, medium: 3, high: 1 },
+        // Communication: effective=5, needs_improvement=2
+        communication: { effective: 5, needs_improvement: 2 }
+      };
+      
+      let totalScore = 0;
+      let count = 0;
+      
+      // Calculate average of available metrics
+      if (report.delivery && scores.delivery[report.delivery]) {
+        totalScore += scores.delivery[report.delivery];
+        count++;
+      }
+      if (report.quality && scores.quality[report.quality]) {
+        totalScore += scores.quality[report.quality];
+        count++;
+      }
+      if (report.rework && scores.rework[report.rework]) {
+        totalScore += scores.rework[report.rework];
+        count++;
+      }
+      if (report.communication && scores.communication[report.communication]) {
+        totalScore += scores.communication[report.communication];
+        count++;
+      }
+      
+      // If no metrics available, fall back to overall_status
+      if (count === 0) {
+        const statusScore = { green: 5, amber: 3, red: 1 };
+        return statusScore[report.overall_status] || null;
+      }
+      
+      // Return average rounded to 1 decimal place
+      return Math.round((totalScore / count) * 10) / 10;
+    };
+    
+    // Fetch latest confirmed report for each resource/manager (sorted by createdAt desc)
     const resourcesWithReports = await Promise.all(
       resources.map(async (resource) => {
         const reports = await dbAdapter.getPerformanceReports({ resource_id: resource.id });
@@ -266,6 +367,8 @@ router.get('/resources', authenticate, async (req, res) => {
             rework: latestReport.rework,
             communication: latestReport.communication,
             recommendation: latestReport.recommendation,
+            role_team: latestReport.role_team,
+            rating: calculateRating(latestReport),
             strengths: latestReport.strengths,
             areas_of_improvement: latestReport.areas_of_improvement,
             overall_reasons: latestReport.overall_reasons

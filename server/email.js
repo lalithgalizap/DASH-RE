@@ -68,4 +68,39 @@ async function sendPasswordResetEmail(to, code) {
   }
 }
 
-module.exports = { sendWelcomeEmail, sendPasswordResetEmail };
+async function sendWeeklyUpdateReminder(to, resourceName, weekStarting, managerName) {
+  const weekDate = new Date(weekStarting);
+  const weekEnd = new Date(weekDate);
+  weekEnd.setDate(weekDate.getDate() + 4);
+  
+  const weekLabel = `${weekDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+  
+  const mailOptions = {
+    from: process.env.SMTP_USER,
+    to: to,
+    subject: `Reminder: Weekly Update Due - Week of ${weekLabel}`,
+    html: `
+      <h2>Weekly Update Reminder</h2>
+      <p>Hi ${resourceName},</p>
+      <p>This is a friendly reminder to submit your weekly update for the week of <strong>${weekLabel}</strong>.</p>
+      <p>Please log in to the PMO Dashboard and submit your update at your earliest convenience.</p>
+      <br>
+      <p><a href="http://localhost:3000/weekly-updates" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Submit Weekly Update</a></p>
+      <br>
+      ${managerName ? `<p><em>Sent by ${managerName}</em></p>` : ''}
+      <br>
+      <p style="color: #666; font-size: 12px;">If you have already submitted your update, please disregard this email.</p>
+    `
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log('Weekly update reminder sent to:', to);
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to send weekly update reminder:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+module.exports = { sendWelcomeEmail, sendPasswordResetEmail, sendWeeklyUpdateReminder };

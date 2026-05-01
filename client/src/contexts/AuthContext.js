@@ -101,6 +101,18 @@ export const AuthProvider = ({ children }) => {
            user?.role === 'Superuser' || user?.role_name === 'Superuser';
   };
 
+  const canManageWeeklyUpdates = () => {
+    return hasPermission('weekly_updates', 'manage') || isAdmin() || isCSP();
+  };
+
+  const canViewGlobalWeeklyUpdates = () => {
+    return hasPermission('weekly_updates', 'view_global') || isAdmin() || isCSP();
+  };
+
+  const canViewGlobalPerformance = () => {
+    return hasPermission('performance', 'view_global') || isAdmin() || isCSP();
+  };
+
   // Forgot password methods
   const sendResetCode = async (email) => {
     try {
@@ -157,6 +169,9 @@ export const AuthProvider = ({ children }) => {
     isCSP,
     canManagePerformance,
     canAddClients,
+    canManageWeeklyUpdates,
+    canViewGlobalWeeklyUpdates,
+    canViewGlobalPerformance,
     checkAuth,
     sendResetCode,
     verifyResetCode,

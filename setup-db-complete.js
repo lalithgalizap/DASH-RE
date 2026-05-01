@@ -54,6 +54,8 @@ async function setupDatabase() {
       { permission_name: 'view_roles', description: 'Can view roles' },
       { permission_name: 'manage_closure_docs', description: 'Can upload and delete closure documents' },
       { permission_name: 'view_weekly_updates', description: 'Can view Weekly Updates page' },
+      { permission_name: 'manage_weekly_updates', description: 'Can create and edit weekly updates' },
+      { permission_name: 'view_global_weekly_updates', description: 'Can view all weekly updates globally' },
       { permission_name: 'view_performance', description: 'Can view Performance page' },
       { permission_name: 'manage_performance', description: 'Can upload and manage performance reports' },
       { permission_name: 'manage_staff_augmentation', description: 'Can manage staff augmentation resources' }

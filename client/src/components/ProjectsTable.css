@@ -113,6 +113,10 @@
   border-bottom: 1px solid #e5e7eb;
 }
 
+.projects-table th:last-child {
+  text-align: center;
+}
+
 .projects-table tbody tr {
   border-bottom: 1px solid #e5e7eb;
   transition: background-color 0.2s ease;
@@ -128,6 +132,10 @@
   color: #000000;
   vertical-align: top;
   font-weight: 500;
+}
+
+.projects-table td:last-child {
+  text-align: center;
 }
 
 .project-name strong {
@@ -224,31 +232,46 @@
 .action-buttons {
   display: flex;
   gap: 8px;
+  justify-content: center;
+  align-items: center;
 }
 
 .action-btn {
-  background: none;
-  color: #6b7280;
-  padding: 6px;
-  border-radius: 4px;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
+  border: 1px solid;
+  cursor: pointer;
+  background-color: white;
 }
 
-.action-btn:hover {
-  background-color: #f3f4f6;
+.action-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.edit-btn {
+  color: #3b82f6;
+  border-color: #3b82f6;
 }
 
 .edit-btn:hover {
-  color: #3b82f6;
-  background-color: rgba(59, 130, 246, 0.1);
+  color: #ffffff;
+  background-color: #3b82f6;
+}
+
+.delete-btn {
+  color: #ef4444;
+  border-color: #ef4444;
 }
 
 .delete-btn:hover {
-  color: #ef4444;
-  background-color: rgba(239, 68, 68, 0.1);
+  color: #ffffff;
+  background-color: #ef4444;
 }
 
 .export-btn {
