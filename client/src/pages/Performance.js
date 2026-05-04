@@ -1068,6 +1068,18 @@ function Performance() {
                               >
                                 <Pencil size={16} />
                               </button>
+                              {canManagePerformance && (
+                                <button
+                                  className="action-btn delete-btn"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteReport(report.id);
+                                  }}
+                                  title="Delete Report"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>

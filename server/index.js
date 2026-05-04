@@ -8,6 +8,7 @@ const path = require('path');
 const dbAdapter = require('./dbAdapter');
 const { authenticate } = require('./auth');
 const { initializeMetricSnapshotJob } = require('./jobs/metricSnapshotJob');
+const { initializePortfolioExportJob } = require('./jobs/portfolioExportJob');
 
 // Import route modules
 const projectsRoutes = require('./routes/projects');
@@ -19,6 +20,7 @@ const metricsRoutes = require('./routes/metrics');
 const clientsRoutes = require('./routes/clients');
 const performanceRoutes = require('./routes/performance');
 const weeklyUpdatesRoutes = require('./routes/weeklyUpdates');
+const exportScheduleRoutes = require('./routes/exportSchedule');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -27,6 +29,8 @@ const PORT = process.env.PORT || 5000;
 dbAdapter.initialize().then(() => {
   // Initialize metric snapshot job after DB is ready
   initializeMetricSnapshotJob();
+  // Initialize portfolio export job
+  initializePortfolioExportJob();
 }).catch(err => {
   console.error('Failed to initialize database:', err);
   process.exit(1);
@@ -48,6 +52,7 @@ app.use('/api/metrics', metricsRoutes);
 app.use('/api/clients', clientsRoutes);
 app.use('/api/performance', performanceRoutes);
 app.use('/api/weekly-updates', weeklyUpdatesRoutes);
+app.use('/api/export-schedule', exportScheduleRoutes);
 
 // Direct route for projects-file-status (also available at /api/metrics/projects-file-status)
 app.get('/api/projects-file-status', authenticate, async (req, res) => {

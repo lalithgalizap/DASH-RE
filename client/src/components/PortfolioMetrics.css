@@ -1,5 +1,9 @@
 .portfolio-metrics {
   margin-bottom: 24px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 20px;
 }
 
 .portfolio-header {
@@ -22,7 +26,10 @@
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  gap: 12px;
+  gap: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 /* All cards span 1 column */
@@ -111,11 +118,114 @@
   font-weight: 400;
 }
 
+/* Modern Card Design */
+.metrics-section-header {
+  margin-bottom: 16px;
+}
+
+.metrics-section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+}
+
+.metric-card-modern {
+  background: white;
+  border-radius: 0;
+  padding: 16px;
+  box-shadow: none;
+  border: none;
+  border-right: 1px solid #e2e8f0;
+  display: flex;
+  align-items: flex-start;
+  transition: all 0.15s ease;
+}
+
+.metric-card-modern:last-child {
+  border-right: none;
+}
+
+.metric-card-modern:hover {
+  background: #f8fafc;
+}
+
+.metric-card-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+}
+
+.metric-icon-container {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.metric-alert-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: white;
+  padding: 0 5px;
+}
+
+.metric-text-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.metric-label-modern {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  line-height: 1.3;
+}
+
+.metric-value-big {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 2px 0;
+}
+
+.metric-sublabel-modern {
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.3;
+}
+
 /* Responsive */
 @media (max-width: 1200px) {
   .metrics-grid {
     grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
+    gap: 0;
+  }
+  .metric-card-modern {
+    border-right: none;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .metric-card-modern:nth-child(3n) {
+    border-right: none;
+  }
+  .metric-card-modern:nth-child(n+4) {
+    border-bottom: none;
   }
   .metric-value {
     font-size: 22px;
@@ -128,11 +238,30 @@
 @media (max-width: 900px) {
   .metrics-grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 0;
+  }
+  .metric-card-modern {
+    border-right: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .metric-card-modern:nth-child(2n) {
+    border-right: none;
+  }
+  .metric-card-modern:nth-child(n+5) {
+    border-bottom: none;
   }
 }
 
 @media (max-width: 640px) {
   .metrics-grid {
     grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .metric-card-modern {
+    border-right: none;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .metric-card-modern:last-child {
+    border-bottom: none;
   }
 }

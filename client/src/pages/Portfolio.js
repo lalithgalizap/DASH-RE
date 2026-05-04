@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Users } from 'lucide-react';
+import { Search, Users, Settings, Mail, Briefcase, BarChart3, TrendingUp, CheckCircle } from 'lucide-react';
 import PortfolioMetrics from '../components/PortfolioMetrics';
 import { useAuth } from '../contexts/AuthContext';
 import { 
@@ -22,7 +22,8 @@ import {
   SummaryModal,
   RAGCategoryModal,
   ProjectInfoModal,
-  ClientManagementModal
+  ClientManagementModal,
+  ExportSettingsModal
 } from '../components/Portfolio';
 import './Portfolio.css';
 
@@ -49,6 +50,7 @@ function PortfolioContent() {
   const [showClientDropdown, setShowClientDropdown] = useState(false);
   const [tableViewMode, setTableViewMode] = useState('detailed'); // 'default' or 'detailed'
   const [showClientManagement, setShowClientManagement] = useState(false);
+  const [showExportSettings, setShowExportSettings] = useState(false);
   const [allClients, setAllClients] = useState(['All']);
 
   useEffect(() => {
@@ -90,16 +92,18 @@ function PortfolioContent() {
 
   const freshnessLists = useMemo(() => {
     // Filter freshness lists to only include client-filtered projects
-    const clientFilteredIds = new Set(clientFilteredProjects.map(p => String(p._id || p.id)));
+    // Use both _id and id fields for consistent ID matching
+    const getProjectId = (p) => String(p._id || p.id || '');
+    const clientFilteredIds = new Set(clientFilteredProjects.map(getProjectId));
     
     const fresh = [...(portfolioData.updatedThisWeek || [])]
-      .filter(p => clientFilteredIds.has(String(p._id || p.id)))
+      .filter(p => clientFilteredIds.has(getProjectId(p)))
       .sort((a, b) => new Date(b.lastModified || 0) - new Date(a.lastModified || 0));
     const stale = [...(portfolioData.notUpdated || [])]
-      .filter(p => clientFilteredIds.has(String(p._id || p.id)))
+      .filter(p => clientFilteredIds.has(getProjectId(p)))
       .sort((a, b) => new Date(a.lastModified || 0) - new Date(b.lastModified || 0));
     const missing = (portfolioData.noData || [])
-      .filter(p => clientFilteredIds.has(String(p._id || p.id)));
+      .filter(p => clientFilteredIds.has(getProjectId(p)));
     
     return { fresh, stale, missing };
   }, [portfolioData, clientFilteredProjects]);
@@ -155,7 +159,9 @@ function PortfolioContent() {
       value: activeProjectsFiltered.length,
       helper: 'In-flight initiatives',
       tone: 'primary',
-      type: 'active'
+      type: 'active',
+      icon: <Briefcase size={20} color="#2563eb" />,
+      iconBg: '#dbeafe'
     },
     {
       label: 'Projects by RAG',
@@ -171,21 +177,27 @@ function PortfolioContent() {
       ),
       helper: 'Red / Amber / Green',
       tone: 'warning',
-      type: 'rag'
+      type: 'rag',
+      icon: <BarChart3 size={20} color="#2563eb" />,
+      iconBg: '#dbeafe'
     },
     {
       label: 'Planned vs Actual',
       value: `${portfolioVariance >= 0 ? '+' : ''}${portfolioVariance}%`,
       helper: portfolioVariance >= 0 ? 'Ahead of schedule' : `${Math.abs(portfolioVariance)}% behind schedule`,
       tone: portfolioVariance >= 0 ? 'primary' : 'danger',
-      type: 'plannedVsActual'
+      type: 'plannedVsActual',
+      icon: <TrendingUp size={20} color="#9333ea" />,
+      iconBg: '#f3e8ff'
     },
     {
       label: 'Update Status',
       value: `${updatePercentage}%`,
       helper: `${freshProjects}/${totalActiveProjects} active projects up to date`,
       tone: 'muted',
-      type: 'stale'
+      type: 'stale',
+      icon: <CheckCircle size={20} color="#16a34a" />,
+      iconBg: '#dcfce7'
     }
   ];
 
@@ -627,6 +639,27 @@ function PortfolioContent() {
               >
                 Portfolio Metrics
               </button>
+              {hasPermission('users', 'manage') && (
+                <button
+                  onClick={() => setShowExportSettings(true)}
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    border: '1px solid #2563eb',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    background: 'white',
+                    color: '#2563eb',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <Settings size={14} />
+                  Export Settings
+                </button>
+              )}
             </div>
           </div>
 
@@ -756,6 +789,12 @@ function PortfolioContent() {
       <ClientManagementModal
         isOpen={showClientManagement}
         onClose={() => setShowClientManagement(false)}
+      />
+
+      {/* Export Settings Modal */}
+      <ExportSettingsModal
+        isOpen={showExportSettings}
+        onClose={() => setShowExportSettings(false)}
       />
 
       </div>

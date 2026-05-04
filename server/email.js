@@ -72,9 +72,9 @@ async function sendWeeklyUpdateReminder(to, resourceName, weekStarting, managerN
   const weekDate = new Date(weekStarting);
   const weekEnd = new Date(weekDate);
   weekEnd.setDate(weekDate.getDate() + 4);
-  
+
   const weekLabel = `${weekDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
-  
+
   const mailOptions = {
     from: process.env.SMTP_USER,
     to: to,
@@ -103,4 +103,38 @@ async function sendWeeklyUpdateReminder(to, resourceName, weekStarting, managerN
   }
 }
 
-module.exports = { sendWelcomeEmail, sendPasswordResetEmail, sendWeeklyUpdateReminder };
+async function sendPortfolioExportEmail(recipients, attachmentBuffer, filename, format) {
+  const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const fileExtension = format === 'excel' ? 'xlsx' : 'csv';
+
+  const mailOptions = {
+    from: process.env.SMTP_USER,
+    to: recipients,
+    subject: `Portfolio Export - ${today}`,
+    html: `
+      <h2>Portfolio Export</h2>
+      <p>Please find attached the portfolio export generated on <strong>${today}</strong>.</p>
+      <p>This is an automated export containing the latest project data from the PMO Dashboard.</p>
+      <br>
+      <p style="color: #666; font-size: 12px;">If you have any questions about this export, please contact your system administrator.</p>
+    `,
+    attachments: [
+      {
+        filename: `${filename}.${fileExtension}`,
+        content: attachmentBuffer,
+        contentType: format === 'excel' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'text/csv'
+      }
+    ]
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log('Portfolio export email sent to:', recipients);
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to send portfolio export email:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+module.exports = { sendWelcomeEmail, sendPasswordResetEmail, sendWeeklyUpdateReminder, sendPortfolioExportEmail };

@@ -29,4 +29,5 @@ export { default as EditProjectDetailModal } from './modals/EditProjectDetailMod
 export { default as WeekDetailModal } from './modals/WeekDetailModal';
 export { default as ProjectInfoModal } from './modals/ProjectInfoModal';
 export { default as ClientManagementModal } from './modals/ClientManagementModal';
+export { default as ExportSettingsModal } from './modals/ExportSettingsModal';
 export * from './utils';

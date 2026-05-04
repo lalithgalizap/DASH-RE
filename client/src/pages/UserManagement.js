@@ -13,7 +13,7 @@ const UserManagement = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
-  const [viewMode, setViewMode] = useState('all'); // 'all' | 'manager-resource'
+  const [viewMode, setViewMode] = useState('all'); // 'all' | 'manager-resource' | 'legacy'
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -149,21 +149,28 @@ const UserManagement = () => {
   // Filter users based on view mode
   const filteredUsers = users.filter(user => {
     if (viewMode === 'all') return true;
-    return EXCLUDED_ROLES.includes(user.role_name);
+    if (viewMode === 'manager-resource') return EXCLUDED_ROLES.includes(user.role_name);
+    if (viewMode === 'legacy') return !EXCLUDED_ROLES.includes(user.role_name);
+    return true;
   });
 
   // Get current role name from formData
   const currentRoleName = roles.find(r => r.id === formData.role_id)?.name || '';
   const isResource = currentRoleName === 'Resource';
-  const isMRView = viewMode === 'manager-resource' && (currentRoleName === 'Manager' || currentRoleName === 'Resource');
+  const isMRView = EXCLUDED_ROLES.includes(currentRoleName);
 
   // All manager users for the dropdown
   const managerUsers = users.filter(u => u.role_name === 'Manager');
 
-  // Available roles for dropdown based on view mode
-  const availableRoles = viewMode === 'all'
-    ? roles.filter(r => !EXCLUDED_ROLES.includes(r.name))
-    : roles.filter(r => EXCLUDED_ROLES.includes(r.name));
+  // Determine if editing/creating a Manager/Resource user
+  const editingUserRoleName = editingUser?.role_name || '';
+  const isEditingMRUser = EXCLUDED_ROLES.includes(editingUserRoleName);
+  const isCreatingMRUser = EXCLUDED_ROLES.includes(currentRoleName);
+
+  // Available roles based on USER'S ROLE (not viewMode)
+  const availableRoles = (isEditingMRUser || isCreatingMRUser)
+    ? roles.filter(r => EXCLUDED_ROLES.includes(r.name))      // Manager/Resource roles only
+    : roles.filter(r => !EXCLUDED_ROLES.includes(r.name));  // Legacy roles only
 
   if (loading) {
     return (
@@ -176,6 +183,21 @@ const UserManagement = () => {
 
   return (
     <div className="admin-page">
+      <div style={{
+        backgroundColor: '#213848',
+        border: '1px solid #e8eaeb',
+        borderRadius: '8px',
+        padding: '12px 16px',
+        marginBottom: '16px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        fontSize: '14px',
+        color: '#f0f0f2da'
+      }}>
+        <span style={{ fontSize: '16px' }}></span>
+        <span><strong>Note:</strong> To add a Manager or Resource user, please switch to the <strong>"Manager / Resource"</strong> toggle</span>
+      </div>
       <div className="admin-header">
         <div className="admin-title">
           <Users size={24} />
@@ -223,6 +245,23 @@ const UserManagement = () => {
               }}
             >
               Manager / Resource
+            </button>
+            <button
+              onClick={() => setViewMode('legacy')}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '6px',
+                border: 'none',
+                fontSize: '13px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                backgroundColor: viewMode === 'legacy' ? '#ffffff' : 'transparent',
+                color: viewMode === 'legacy' ? '#0f172a' : '#64748b',
+                boxShadow: viewMode === 'legacy' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              Legacy Users
             </button>
           </div>
           <button className="btn-primary" onClick={handleAdd}>

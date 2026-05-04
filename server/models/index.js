@@ -10,6 +10,7 @@ const MetricSnapshot = require('./MetricSnapshot');
 const Client = require('./Client');
 const PerformanceReport = require('./PerformanceReport');
 const WeeklyUpdate = require('./WeeklyUpdate');
+const ExportSchedule = require('./ExportSchedule');
 
 module.exports = {
   Project,
@@ -23,5 +24,6 @@ module.exports = {
   MetricSnapshot,
   Client,
   PerformanceReport,
-  WeeklyUpdate
+  WeeklyUpdate,
+  ExportSchedule
 };
