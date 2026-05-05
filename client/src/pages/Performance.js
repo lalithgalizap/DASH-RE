@@ -48,10 +48,10 @@ function Performance() {
   // All resources state and filters
   const [allResources, setAllResources] = useState([]);
   const [resourceFilters, setResourceFilters] = useState({
-    client: '',
-    status: '',
-    quarter: '',
-    year: '',
+    client: [],
+    status: [],
+    quarter: [],
+    year: [],
     search: ''
   });
 
@@ -134,8 +134,12 @@ function Performance() {
   const fetchAllResources = useCallback(async (filters = {}) => {
     try {
       const params = new URLSearchParams();
-      if (filters.quarter) params.append('quarter', filters.quarter);
-      if (filters.year) params.append('year', filters.year);
+      if (filters.quarter && filters.quarter.length > 0) {
+        filters.quarter.forEach(q => params.append('quarter', q));
+      }
+      if (filters.year && filters.year.length > 0) {
+        filters.year.forEach(y => params.append('year', y));
+      }
       
       const url = `/api/performance/resources${params.toString() ? '?' + params.toString() : ''}`;
       const response = await axios.get(url);
@@ -428,6 +432,29 @@ function Performance() {
     return colors[Math.abs(hash) % colors.length];
   };
 
+  // Multi-select filter helpers
+  const toggleFilterOption = (filterKey, value) => {
+    setResourceFilters(prev => {
+      const currentValues = prev[filterKey];
+      const newValues = currentValues.includes(value)
+        ? currentValues.filter(v => v !== value)
+        : [...currentValues, value];
+      return { ...prev, [filterKey]: newValues };
+    });
+  };
+
+  const hasActiveFilters = () => {
+    return resourceFilters.search || 
+           resourceFilters.client.length > 0 || 
+           resourceFilters.quarter.length > 0 || 
+           resourceFilters.year.length > 0 || 
+           resourceFilters.status.length > 0;
+  };
+
+  const clearAllFilters = () => {
+    setResourceFilters({ client: [], status: [], quarter: [], year: [], search: '' });
+  };
+
   if (loading && view === 'clients') {
     return (
       <div className="performance-page">
@@ -545,55 +572,114 @@ function Performance() {
                     onChange={e => setResourceFilters({ ...resourceFilters, search: e.target.value })}
                     className="filter-input"
                   />
-                  <select
-                    value={resourceFilters.client}
-                    onChange={e => setResourceFilters({ ...resourceFilters, client: e.target.value })}
-                    className="filter-select"
-                  >
-                    <option value="">All Clients</option>
-                    {clients.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                  <select
-                    value={resourceFilters.quarter}
-                    onChange={e => setResourceFilters({ ...resourceFilters, quarter: e.target.value })}
-                    className="filter-select"
-                  >
-                    <option value="">All Quarters</option>
-                    <option value="Q1">Q1</option>
-                    <option value="Q2">Q2</option>
-                    <option value="Q3">Q3</option>
-                    <option value="Q4">Q4</option>
-                  </select>
-                  <select
-                    value={resourceFilters.year}
-                    onChange={e => setResourceFilters({ ...resourceFilters, year: e.target.value })}
-                    className="filter-select"
-                  >
-                    <option value="">All Years</option>
-                    <option value="2024">2024</option>
-                    <option value="2025">2025</option>
-                    <option value="2026">2026</option>
-                    <option value="2027">2027</option>
-                  </select>
-                  <select
-                    value={resourceFilters.status}
-                    onChange={e => setResourceFilters({ ...resourceFilters, status: e.target.value })}
-                    className="filter-select"
-                  >
-                    <option value="">All Recommendations</option>
-                    <option value="continue_strong">Continue (Strong)</option>
-                    <option value="continue_meets">Continue (Meets)</option>
-                    <option value="continue_improvement">Continue (Plan)</option>
-                    <option value="role_change">Role Change</option>
-                    <option value="replacement">Replacement/Backfill</option>
-                    <option value="none">No Report</option>
-                  </select>
-                  {(resourceFilters.search || resourceFilters.client || resourceFilters.quarter || resourceFilters.year || resourceFilters.status) && (
+                  
+                  {/* Multi-select Client Filter */}
+                  <div className="multi-select-wrapper">
+                    <select
+                      multiple
+                      value={resourceFilters.client}
+                      onChange={e => {
+                        const selected = Array.from(e.target.selectedOptions, option => option.value);
+                        setResourceFilters({ ...resourceFilters, client: selected });
+                      }}
+                      className="filter-select multi-select"
+                      size="1"
+                    >
+                      {clients.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                    <div className="multi-select-label">
+                      {resourceFilters.client.length === 0 ? 'All Clients' : 
+                       resourceFilters.client.length === 1 ? clients.find(c => c.id === resourceFilters.client[0])?.name :
+                       `${resourceFilters.client.length} Clients`}
+                    </div>
+                  </div>
+
+                  {/* Multi-select Quarter Filter */}
+                  <div className="multi-select-wrapper">
+                    <select
+                      multiple
+                      value={resourceFilters.quarter}
+                      onChange={e => {
+                        const selected = Array.from(e.target.selectedOptions, option => option.value);
+                        setResourceFilters({ ...resourceFilters, quarter: selected });
+                      }}
+                      className="filter-select multi-select"
+                      size="1"
+                    >
+                      <option value="Q1">Q1</option>
+                      <option value="Q2">Q2</option>
+                      <option value="Q3">Q3</option>
+                      <option value="Q4">Q4</option>
+                    </select>
+                    <div className="multi-select-label">
+                      {resourceFilters.quarter.length === 0 ? 'All Quarters' : 
+                       resourceFilters.quarter.length === 1 ? resourceFilters.quarter[0] :
+                       `${resourceFilters.quarter.length} Quarters`}
+                    </div>
+                  </div>
+
+                  {/* Multi-select Year Filter */}
+                  <div className="multi-select-wrapper">
+                    <select
+                      multiple
+                      value={resourceFilters.year}
+                      onChange={e => {
+                        const selected = Array.from(e.target.selectedOptions, option => option.value);
+                        setResourceFilters({ ...resourceFilters, year: selected });
+                      }}
+                      className="filter-select multi-select"
+                      size="1"
+                    >
+                      <option value="2024">2024</option>
+                      <option value="2025">2025</option>
+                      <option value="2026">2026</option>
+                      <option value="2027">2027</option>
+                    </select>
+                    <div className="multi-select-label">
+                      {resourceFilters.year.length === 0 ? 'All Years' : 
+                       resourceFilters.year.length === 1 ? resourceFilters.year[0] :
+                       `${resourceFilters.year.length} Years`}
+                    </div>
+                  </div>
+
+                  {/* Multi-select Status Filter */}
+                  <div className="multi-select-wrapper">
+                    <select
+                      multiple
+                      value={resourceFilters.status}
+                      onChange={e => {
+                        const selected = Array.from(e.target.selectedOptions, option => option.value);
+                        setResourceFilters({ ...resourceFilters, status: selected });
+                      }}
+                      className="filter-select multi-select"
+                      size="1"
+                    >
+                      <option value="continue_strong">Continue (Strong)</option>
+                      <option value="continue_meets">Continue (Meets)</option>
+                      <option value="continue_improvement">Continue (Plan)</option>
+                      <option value="role_change">Role Change</option>
+                      <option value="replacement">Replacement/Backfill</option>
+                      <option value="none">No Report</option>
+                    </select>
+                    <div className="multi-select-label">
+                      {resourceFilters.status.length === 0 ? 'All Recommendations' : 
+                       resourceFilters.status.length === 1 ? 
+                         (resourceFilters.status[0] === 'continue_strong' ? 'Continue (Strong)' :
+                          resourceFilters.status[0] === 'continue_meets' ? 'Continue (Meets)' :
+                          resourceFilters.status[0] === 'continue_improvement' ? 'Continue (Plan)' :
+                          resourceFilters.status[0] === 'role_change' ? 'Role Change' :
+                          resourceFilters.status[0] === 'replacement' ? 'Replacement/Backfill' :
+                          'No Report') :
+                       `${resourceFilters.status.length} Selected`}
+                    </div>
+                  </div>
+
+                  {hasActiveFilters() && (
                     <button
                       className="clear-filters-btn"
-                      onClick={() => setResourceFilters({ client: '', status: '', quarter: '', year: '', search: '' })}
+                      onClick={clearAllFilters}
                     >
                       ✕ Clear
                     </button>
@@ -617,9 +703,11 @@ function Performance() {
                       {allResources
                         .filter(r => {
                           const matchesSearch = !resourceFilters.search || r.username?.toLowerCase().includes(resourceFilters.search.toLowerCase());
-                          const matchesClient = !resourceFilters.client || r.client_id === resourceFilters.client;
-                          const matchesStatus = !resourceFilters.status || 
-                            (resourceFilters.status === 'none' ? !r.latest_report : r.latest_report?.recommendation === resourceFilters.status);
+                          const matchesClient = resourceFilters.client.length === 0 || resourceFilters.client.includes(r.client_id);
+                          const matchesStatus = resourceFilters.status.length === 0 || 
+                            resourceFilters.status.some(status => 
+                              status === 'none' ? !r.latest_report : r.latest_report?.recommendation === status
+                            );
                           return matchesSearch && matchesClient && matchesStatus;
                         })
                         .map(resource => {

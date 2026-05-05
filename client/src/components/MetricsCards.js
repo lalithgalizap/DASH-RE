@@ -21,13 +21,11 @@ function MetricsCards({ metrics }) {
   ];
 
   return (
-    <div className="metrics-cards">
+    <div className="dashboard-metrics-cards">
       {cards.map((card, index) => (
-        <div key={index} className="metric-card">
-          <div className="metric-header">
-            <span className="metric-title">{card.title}</span>
-          </div>
-          <div className="metric-value" style={{ color: card.color }}>
+        <div key={index} className="dashboard-metric-card">
+          <div className="dashboard-metric-title">{card.title}</div>
+          <div className="dashboard-metric-value" style={{ color: card.color }}>
             {card.value}
           </div>
         </div>

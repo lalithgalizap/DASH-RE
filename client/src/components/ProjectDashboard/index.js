@@ -350,7 +350,6 @@ function ProjectDashboard({ projectId, projectName, project }) {
               </span>
             )}
           </div>
-          <div style={{ fontSize: '9px', color: '#9ca3af', marginTop: '4px' }}>Click for details</div>
         </div>
 
         <div className="metric-card clickable" onClick={() => setShowMilestoneCompletionModal(true)} style={{ cursor: 'pointer' }}>
@@ -363,7 +362,6 @@ function ProjectDashboard({ projectId, projectName, project }) {
               ? Math.round((metrics.milestoneCompletion.completed / metrics.milestoneCompletion.total) * 100) 
               : 0}%
           </div>
-          <div style={{ fontSize: '9px', color: '#9ca3af', marginTop: '4px' }}>Click for details</div>
         </div>
 
         <div className="metric-card clickable" onClick={() => setShowUpcomingMilestonesModal(true)} style={{ cursor: 'pointer' }}>
@@ -372,7 +370,6 @@ function ProjectDashboard({ projectId, projectName, project }) {
             {metrics.upcomingMilestones}
           </div>
           <div className="metric-sublabel">Milestones</div>
-          <div style={{ fontSize: '9px', color: '#9ca3af', marginTop: '4px' }}>Click for details</div>
         </div>
 
         <div className="metric-card alert clickable" onClick={() => setShowOverdueMilestonesModal(true)} style={{ cursor: 'pointer' }}>
@@ -381,7 +378,6 @@ function ProjectDashboard({ projectId, projectName, project }) {
             {metrics.overdueMilestones}
           </div>
           <div className="metric-sublabel">{getTrendIcon(metrics.overdueMilestones)} Attention</div>
-          <div style={{ fontSize: '9px', color: '#9ca3af', marginTop: '4px' }}>Click for details</div>
         </div>
 
         <div className="metric-card alert clickable" onClick={() => setShowOverdueTasksModal(true)} style={{ cursor: 'pointer' }}>
@@ -390,7 +386,6 @@ function ProjectDashboard({ projectId, projectName, project }) {
             {metrics.overdueTasks}
           </div>
           <div className="metric-sublabel">{getTrendIcon(metrics.overdueTasks)} Attention</div>
-          <div style={{ fontSize: '9px', color: '#9ca3af', marginTop: '4px' }}>Click for details</div>
         </div>
       </div>
 

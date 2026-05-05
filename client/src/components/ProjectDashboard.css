@@ -101,11 +101,9 @@
 
 .project-dashboard .dashboard-metrics-row {
   display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(220px, 1fr);
-  gap: 16px;
-  overflow-x: auto;
-  padding-bottom: 4px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
 }
 
 .project-dashboard .dashboard-metrics-row::-webkit-scrollbar {
@@ -117,87 +115,95 @@
   border-radius: 999px;
 }
 
-.metric-card {
+.project-dashboard .metric-card {
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
-  padding: 14px 16px;
+  padding: 14px 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   min-width: 0;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-.metric-card.primary {
+.project-dashboard .metric-card.primary {
   background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: white;
   border: none;
 }
 
-.metric-card.alert {
+.project-dashboard .metric-card.alert {
   border-left: 4px solid #f59e0b;
 }
 
-.metric-label {
-  font-size: 10px;
+.project-dashboard .metric-label {
+  font-size: 11px;
   font-weight: 600;
   color: #6b7280;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
-  margin-bottom: 4px;
+  letter-spacing: 0.4px;
+  margin-bottom: 6px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.metric-card.primary .metric-label {
+.project-dashboard .metric-card.primary .metric-label {
   color: rgba(255, 255, 255, 0.9);
 }
 
-.metric-value {
-  font-size: 22px;
+.project-dashboard .metric-value {
+  font-size: 26px;
   font-weight: 700;
   color: #111827;
-  margin-bottom: 2px;
-  white-space: nowrap;
+  margin-bottom: 4px;
+  line-height: 1.2;
+  word-break: break-word;
 }
 
-.metric-value-large {
-  font-size: 26px;
+.project-dashboard .metric-value-large {
+  font-size: 30px;
   font-weight: 700;
   color: white;
   display: flex;
   align-items: center;
   gap: 6px;
+  line-height: 1.2;
 }
 
-.metric-trend {
+.project-dashboard .metric-trend {
   font-size: 12px;
-  font-size: 14px;
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
-.metric-trend.success {
+.project-dashboard .metric-trend.success {
   color: rgba(255, 255, 255, 0.9);
 }
 
-.metric-sublabel {
-  font-size: 10px;
+.project-dashboard .metric-sublabel {
+  font-size: 12px;
   color: #6b7280;
   white-space: nowrap;
 }
 
-.highlight-blue {
+.project-dashboard .highlight-blue {
   color: #3b82f6;
 }
 
-.highlight-red {
+.project-dashboard .highlight-red {
   color: #dc2626;
 }
 
-.highlight-orange {
+.project-dashboard .highlight-orange {
   color: #f59e0b;
+}
+
+.project-dashboard .metric-card.clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
 }
 
 .metrics-grid-secondary {
@@ -211,7 +217,7 @@
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
-  padding: 16px;
+  padding: 20px;
   display: flex;
   gap: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
@@ -252,24 +258,24 @@
 }
 
 .metric-value-small {
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 700;
   color: #111827;
-  line-height: 1;
-  margin-bottom: 4px;
+  line-height: 1.2;
+  margin-bottom: 6px;
 }
 
 .metric-label-small {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
   color: #6b7280;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .metric-trend-indicator {
-  font-size: 11px;
+  font-size: 12px;
   color: #9ca3af;
   display: flex;
   align-items: center;
@@ -277,7 +283,7 @@
 }
 
 .metric-sublabel-small {
-  font-size: 11px;
+  font-size: 12px;
   color: #6b7280;
 }
 
@@ -461,7 +467,7 @@
 }
 
 .raid-summary-status {
-  font-size: 10px;
+  font-size: 11px;
   color: #9ca3af;
 }
 
@@ -563,12 +569,6 @@
   border-radius: 12px;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   width: 100%;
-}
-
-.metric-card.clickable:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s ease;
 }
 
 @media (max-width: 1024px) {

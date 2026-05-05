@@ -3,46 +3,11 @@ import React from 'react';
 const RAGBoardWithSearch = ({
   ragBuckets,
   ragSearchQuery,
-  setRagSearchQuery,
   setRagCategoryModal,
   onProjectSelect
 }) => {
   return (
     <>
-      {/* RAG Board Search */}
-      <div className="rag-board-search-container" style={{ margin: '0 24px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <span style={{ fontSize: '14px', color: '#6b7280', fontWeight: 500 }}>Search Projects:</span>
-        <input
-          type="text"
-          placeholder="Search by project name, client, or owner..."
-          value={ragSearchQuery}
-          onChange={(e) => setRagSearchQuery(e.target.value)}
-          style={{
-            flex: 1,
-            maxWidth: '400px',
-            padding: '8px 12px',
-            border: '1px solid #e5e7eb',
-            borderRadius: '6px',
-            fontSize: '14px',
-            outline: 'none'
-          }}
-        />
-        {ragSearchQuery && (
-          <button
-            onClick={() => setRagSearchQuery('')}
-            style={{
-              background: 'none',
-              border: 'none',
-              fontSize: '18px',
-              cursor: 'pointer',
-              color: '#6b7280'
-            }}
-          >
-            ×
-          </button>
-        )}
-      </div>
-
       <section className="portfolio-rag-board">
         {['red', 'amber', 'green'].map(status => {
           // Filter projects based on search query

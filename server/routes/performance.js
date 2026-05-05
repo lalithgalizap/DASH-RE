@@ -254,7 +254,10 @@ router.get('/metrics', authenticate, async (req, res) => {
 // GET /api/performance/resources?client_id=xxx&quarter=xxx&year=xxx — resources under a client, or all if no client_id
 router.get('/resources', authenticate, async (req, res) => {
   try {
-    const { client_id, quarter, year } = req.query;
+    const { client_id } = req.query;
+    // Handle multiple quarters and years (can be arrays)
+    const quarters = req.query.quarter ? (Array.isArray(req.query.quarter) ? req.query.quarter : [req.query.quarter]) : [];
+    const years = req.query.year ? (Array.isArray(req.query.year) ? req.query.year : [req.query.year]) : [];
     
     const user = await dbAdapter.getUserById(req.user.id);
     const isAdmin = user.role_name === 'Admin' || user.role_name === 'Superuser';
@@ -351,14 +354,14 @@ router.get('/resources', authenticate, async (req, res) => {
       resources.map(async (resource) => {
         let reports = await dbAdapter.getPerformanceReports({ resource_id: resource.id });
         
-        // Apply quarter filter if provided
-        if (quarter) {
-          reports = reports.filter(r => r.quarter === quarter);
+        // Apply quarter filter if provided (match any of the selected quarters)
+        if (quarters.length > 0) {
+          reports = reports.filter(r => quarters.includes(r.quarter));
         }
         
-        // Apply year filter if provided
-        if (year) {
-          reports = reports.filter(r => r.year?.toString() === year);
+        // Apply year filter if provided (match any of the selected years)
+        if (years.length > 0) {
+          reports = reports.filter(r => years.includes(r.year?.toString()));
         }
         
         // Reports are already sorted by updatedAt descending from dbAdapter
@@ -391,7 +394,7 @@ router.get('/resources', authenticate, async (req, res) => {
     );
     
     // Filter out resources that don't have a matching report when quarter/year filters are applied
-    const filteredResources = (quarter || year) 
+    const filteredResources = (quarters.length > 0 || years.length > 0) 
       ? resourcesWithReports.filter(r => r.latest_report !== null)
       : resourcesWithReports;
     

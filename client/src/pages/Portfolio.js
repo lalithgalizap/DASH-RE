@@ -41,7 +41,6 @@ function PortfolioContent() {
   const [showOpenDependenciesModal, setShowOpenDependenciesModal] = useState(false);
   const [radialViewProject, setRadialViewProject] = useState(null);
   const [summaryModal, setSummaryModal] = useState(null);
-  const [ragSearchQuery, setRagSearchQuery] = useState('');
   const [ragCategoryModal, setRagCategoryModal] = useState(null);
   const [selectedProjectForModal, setSelectedProjectForModal] = useState(null);
   const [projectSearchQuery, setProjectSearchQuery] = useState('');
@@ -500,66 +499,66 @@ function PortfolioContent() {
           }}
         />
 
+        {/* Unified Search Bar - Filters both RAG Board and Projects Table */}
+        <div style={{ marginBottom: '20px' }}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '12px',
+            background: 'white',
+            border: '1px solid #e5e7eb',
+            borderRadius: '8px',
+            padding: '10px 16px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
+          }}>
+            <Search size={20} color="#6b7280" />
+            <input
+              type="text"
+              placeholder="Search by project or client..."
+              value={projectSearchQuery}
+              onChange={(e) => setProjectSearchQuery(e.target.value)}
+              style={{
+                flex: 1,
+                border: 'none',
+                outline: 'none',
+                fontSize: '14px',
+                color: '#111827',
+                background: 'transparent'
+              }}
+            />
+            {projectSearchQuery && (
+              <button
+                onClick={() => setProjectSearchQuery('')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#6b7280',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  padding: '4px 8px'
+                }}
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          {(projectSearchQuery || selectedClient !== 'All') && (
+            <div style={{ marginTop: '8px', fontSize: '13px', color: '#6b7280' }}>
+              Showing {filteredProjects.length} of {clientFilteredProjects.length} projects
+              {selectedClient !== 'All' && <span> for <strong>{selectedClient}</strong></span>}
+            </div>
+          )}
+        </div>
+
       <RAGBoardWithSearch
         ragBuckets={ragBuckets}
-        ragSearchQuery={ragSearchQuery}
-        setRagSearchQuery={setRagSearchQuery}
+        ragSearchQuery={projectSearchQuery}
         setRagCategoryModal={setRagCategoryModal}
         onProjectSelect={setSelectedProjectForModal}
       />
 
       <div className="portfolio-main-grid">
         <div className="portfolio-main-left">
-          {/* Search Bar */}
-          <div style={{ marginBottom: '16px' }}>
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '12px',
-              background: 'white',
-              border: '1px solid #e5e7eb',
-              borderRadius: '8px',
-              padding: '10px 16px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
-            }}>
-              <Search size={20} color="#6b7280" />
-              <input
-                type="text"
-                placeholder="Search by project or client..."
-                value={projectSearchQuery}
-                onChange={(e) => setProjectSearchQuery(e.target.value)}
-                style={{
-                  flex: 1,
-                  border: 'none',
-                  outline: 'none',
-                  fontSize: '14px',
-                  color: '#111827',
-                  background: 'transparent'
-                }}
-              />
-              {projectSearchQuery && (
-                <button
-                  onClick={() => setProjectSearchQuery('')}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#6b7280',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    padding: '4px 8px'
-                  }}
-                >
-                  Clear
-                </button>
-              )}
-            </div>
-            {(projectSearchQuery || selectedClient !== 'All') && (
-              <div style={{ marginTop: '8px', fontSize: '13px', color: '#6b7280' }}>
-                Showing {filteredProjects.length} of {clientFilteredProjects.length} projects
-                {selectedClient !== 'All' && <span> for <strong>{selectedClient}</strong></span>}
-              </div>
-            )}
-          </div>
 
           {/* View Toggle */}
           <div style={{ 
