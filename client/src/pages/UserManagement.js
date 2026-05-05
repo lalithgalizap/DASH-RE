@@ -167,10 +167,26 @@ const UserManagement = () => {
   const isEditingMRUser = EXCLUDED_ROLES.includes(editingUserRoleName);
   const isCreatingMRUser = EXCLUDED_ROLES.includes(currentRoleName);
 
-  // Available roles based on USER'S ROLE (not viewMode)
-  const availableRoles = (isEditingMRUser || isCreatingMRUser)
-    ? roles.filter(r => EXCLUDED_ROLES.includes(r.name))      // Manager/Resource roles only
-    : roles.filter(r => !EXCLUDED_ROLES.includes(r.name));  // Legacy roles only
+  // Available roles based on viewMode OR user's current role
+  // If in Manager/Resource view mode, show only Manager/Resource roles
+  // If in Legacy view mode, show only legacy roles
+  // If editing a user, respect their current role type
+  const availableRoles = (() => {
+    if (viewMode === 'manager-resource') {
+      // In Manager/Resource view, only show Manager and Resource roles
+      return roles.filter(r => EXCLUDED_ROLES.includes(r.name));
+    } else if (viewMode === 'legacy') {
+      // In Legacy view, only show non-Manager/Resource roles
+      return roles.filter(r => !EXCLUDED_ROLES.includes(r.name));
+    } else {
+      // In "All" view, determine based on what user is being edited/created
+      if (isEditingMRUser || isCreatingMRUser) {
+        return roles.filter(r => EXCLUDED_ROLES.includes(r.name));
+      } else {
+        return roles.filter(r => !EXCLUDED_ROLES.includes(r.name));
+      }
+    }
+  })();
 
   if (loading) {
     return (

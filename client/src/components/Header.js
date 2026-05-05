@@ -49,6 +49,11 @@ function Header() {
                   Weekly Updates
                 </Link>
               )}
+              {hasPermission('clients', 'manage') && (
+                <Link to="/clients" className={`nav-link ${location.pathname === '/clients' ? 'active' : ''}`}>
+                  Clients
+                </Link>
+              )}
               {(hasPermission('users', 'manage') || hasPermission('roles', 'manage')) && (
                 <div className="nav-dropdown">
                   <span className="nav-link">

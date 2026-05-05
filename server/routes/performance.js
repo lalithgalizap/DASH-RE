@@ -105,11 +105,11 @@ router.get('/metrics', authenticate, async (req, res) => {
     // Get reports for resources AND managers (if managers have reports)
     let reports = allReports.filter(r => relevantUserIds.has(r.resource_id?.toString?.() || r.resource_id));
 
-    // Latest report per user (by createdAt desc)
+    // Latest report per user (by updatedAt desc)
     const latestByUser = {};
     reports.forEach(r => {
       const rid = r.resource_id?.toString?.() || r.resource_id;
-      if (!latestByUser[rid] || new Date(r.createdAt) > new Date(latestByUser[rid].createdAt)) {
+      if (!latestByUser[rid] || new Date(r.updatedAt) > new Date(latestByUser[rid].updatedAt)) {
         latestByUser[rid] = r;
       }
     });
@@ -251,10 +251,10 @@ router.get('/metrics', authenticate, async (req, res) => {
   }
 });
 
-// GET /api/performance/resources?client_id=xxx — resources under a client, or all if no client_id
+// GET /api/performance/resources?client_id=xxx&quarter=xxx&year=xxx — resources under a client, or all if no client_id
 router.get('/resources', authenticate, async (req, res) => {
   try {
-    const { client_id } = req.query;
+    const { client_id, quarter, year } = req.query;
     
     const user = await dbAdapter.getUserById(req.user.id);
     const isAdmin = user.role_name === 'Admin' || user.role_name === 'Superuser';
@@ -345,14 +345,25 @@ router.get('/resources', authenticate, async (req, res) => {
       return Math.round((totalScore / count) * 10) / 10;
     };
     
-    // Fetch latest confirmed report for each resource/manager (sorted by createdAt desc)
+    // Fetch latest report for each resource/manager (sorted by updatedAt desc)
+    // If quarter/year filters are provided, filter reports first before selecting latest
     const resourcesWithReports = await Promise.all(
       resources.map(async (resource) => {
-        const reports = await dbAdapter.getPerformanceReports({ resource_id: resource.id });
-        // Sort reports by createdAt descending to get the latest first
-        const sortedReports = reports.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        // Find the latest confirmed report, or the latest overall if none confirmed
-        const latestReport = sortedReports.find(r => r.status === 'confirmed') || sortedReports[0] || null;
+        let reports = await dbAdapter.getPerformanceReports({ resource_id: resource.id });
+        
+        // Apply quarter filter if provided
+        if (quarter) {
+          reports = reports.filter(r => r.quarter === quarter);
+        }
+        
+        // Apply year filter if provided
+        if (year) {
+          reports = reports.filter(r => r.year?.toString() === year);
+        }
+        
+        // Reports are already sorted by updatedAt descending from dbAdapter
+        // Take the first one (most recently updated) after filtering
+        const latestReport = reports[0] || null;
         return {
           ...resource,
           latest_report: latestReport ? {
@@ -371,13 +382,20 @@ router.get('/resources', authenticate, async (req, res) => {
             rating: calculateRating(latestReport),
             strengths: latestReport.strengths,
             areas_of_improvement: latestReport.areas_of_improvement,
-            overall_reasons: latestReport.overall_reasons
+            overall_reasons: latestReport.overall_reasons,
+            client_name_snapshot: latestReport.client_name_snapshot || latestReport.client_name,
+            product_name_snapshot: latestReport.product_name_snapshot || latestReport.product_name
           } : null
         };
       })
     );
     
-    res.json(resourcesWithReports);
+    // Filter out resources that don't have a matching report when quarter/year filters are applied
+    const filteredResources = (quarter || year) 
+      ? resourcesWithReports.filter(r => r.latest_report !== null)
+      : resourcesWithReports;
+    
+    res.json(filteredResources);
   } catch (err) {
     console.error('Error fetching resources:', err);
     res.status(500).json({ error: err.message });
@@ -513,7 +531,7 @@ router.post('/extract', authenticate, requireCSPOrAdmin, upload.single('pdf'), a
 router.post('/reports', authenticate, requireCSPOrAdmin, async (req, res) => {
   try {
     const {
-      resource_id, client_id, manager_id,
+      resource_id, client_id, product_id, manager_id,
       quarter, year, period_start, period_end,
       overall_status, overall_reasons,
       delivery, delivery_comments,
@@ -531,12 +549,36 @@ router.post('/reports', authenticate, requireCSPOrAdmin, async (req, res) => {
       return res.status(400).json({ error: 'resource_id, client_id, manager_id, quarter, and year are required' });
     }
 
+    // Fetch client name for snapshot
+    const client = await dbAdapter.getClientById(client_id);
+    if (!client) {
+      return res.status(400).json({ error: 'Invalid client_id' });
+    }
+
+    // Fetch product name for snapshot (if product_id provided)
+    let productNameSnapshot = '';
+    if (product_id) {
+      const products = await dbAdapter.getAllProducts();
+      const product = products.find(p => p.id === product_id);
+      if (!product) {
+        return res.status(400).json({ error: 'Invalid product_id' });
+      }
+      // Validate product belongs to selected client
+      if (product.client_id !== client_id) {
+        return res.status(400).json({ error: 'Product does not belong to the selected client' });
+      }
+      productNameSnapshot = product.name;
+    }
+
     // Helper: clean empty strings for enum fields (Mongoose rejects '' on enums)
     const clean = (val) => (val === '' || val === undefined ? null : val);
 
     const report = await dbAdapter.createPerformanceReport({
       resource_id,
       client_id,
+      client_name_snapshot: client.name,
+      product_id: product_id || null,
+      product_name_snapshot: productNameSnapshot,
       manager_id,
       quarter,
       year: parseInt(year),
@@ -578,6 +620,7 @@ router.post('/reports', authenticate, requireCSPOrAdmin, async (req, res) => {
 router.put('/reports/:id', authenticate, requireCSPOrAdmin, async (req, res) => {
   try {
     const {
+      client_id, product_id,
       quarter, year, period_start, period_end,
       overall_status, overall_reasons,
       delivery, delivery_comments,
@@ -593,7 +636,7 @@ router.put('/reports/:id', authenticate, requireCSPOrAdmin, async (req, res) => 
 
     const clean = (val) => (val === '' || val === undefined ? null : val);
 
-    await dbAdapter.updatePerformanceReport(req.params.id, {
+    const updateData = {
       quarter,
       year: parseInt(year),
       period_start: period_start ? new Date(period_start) : undefined,
@@ -619,7 +662,41 @@ router.put('/reports/:id', authenticate, requireCSPOrAdmin, async (req, res) => 
       manager_name: manager_name || '',
       prepared_by: prepared_by || '',
       prepared_on: prepared_on || ''
-    });
+    };
+
+    // If client_id is being updated, fetch and update snapshot
+    if (client_id) {
+      const client = await dbAdapter.getClientById(client_id);
+      if (!client) {
+        return res.status(400).json({ error: 'Invalid client_id' });
+      }
+      updateData.client_id = client_id;
+      updateData.client_name_snapshot = client.name;
+    }
+
+    // If product_id is being updated, fetch and update snapshot
+    if (product_id !== undefined) {
+      if (product_id) {
+        const products = await dbAdapter.getAllProducts();
+        const product = products.find(p => p.id === product_id);
+        if (!product) {
+          return res.status(400).json({ error: 'Invalid product_id' });
+        }
+        // Validate product belongs to selected client (use updated or existing client_id)
+        const targetClientId = client_id || (await dbAdapter.getPerformanceReports({ _id: req.params.id }))[0]?.client_id;
+        if (product.client_id !== targetClientId) {
+          return res.status(400).json({ error: 'Product does not belong to the selected client' });
+        }
+        updateData.product_id = product_id;
+        updateData.product_name_snapshot = product.name;
+      } else {
+        // Allow clearing product
+        updateData.product_id = null;
+        updateData.product_name_snapshot = '';
+      }
+    }
+
+    await dbAdapter.updatePerformanceReport(req.params.id, updateData);
 
     res.json({ message: 'Performance report updated' });
   } catch (err) {

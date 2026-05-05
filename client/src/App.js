@@ -6,6 +6,7 @@ import Header from './components/Header';
 import Dashboard from './pages/Dashboard';
 import ProjectDetail from './pages/ProjectDetail';
 import Portfolio from './pages/Portfolio';
+import Clients from './pages/Clients';
 import Login from './pages/Login';
 import UserManagement from './pages/UserManagement';
 import RoleManagement from './pages/RoleManagement';
@@ -44,6 +45,11 @@ function App() {
             <Route path="/performance" element={
               <ProtectedRoute requirePermission resource="performance" action="view">
                 <Performance />
+              </ProtectedRoute>
+            } />
+            <Route path="/clients" element={
+              <ProtectedRoute requirePermission resource="clients" action="manage">
+                <Clients />
               </ProtectedRoute>
             } />
             <Route path="/admin/users" element={

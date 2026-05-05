@@ -284,6 +284,11 @@ class DatabaseAdapter {
     return clients.map(c => ({ ...c, id: c._id.toString() }));
   }
 
+  async getClientById(id) {
+    const client = await models.Client.findById(id).lean();
+    return client ? { ...client, id: client._id.toString() } : null;
+  }
+
   async createClient(name) {
     const client = await models.Client.create({ name });
     return { id: client._id.toString(), name };
@@ -291,6 +296,41 @@ class DatabaseAdapter {
 
   async deleteClient(id) {
     await models.Client.findByIdAndDelete(id);
+    return { changes: 1 };
+  }
+
+  // Products
+  async getAllProducts(clientId = null) {
+    const query = clientId ? { client_id: clientId } : {};
+    const products = await models.Product.find(query)
+      .populate('client_id')
+      .sort({ name: 1 })
+      .lean();
+    return products.map(p => ({ 
+      ...p, 
+      id: p._id.toString(),
+      client_id: p.client_id?._id.toString(),
+      client_name: p.client_id?.name
+    }));
+  }
+
+  async createProduct(data) {
+    // Check for duplicate product name for the same client (case-insensitive)
+    if (data.name && data.client_id) {
+      const existingProduct = await models.Product.findOne({ 
+        name: { $regex: new RegExp(`^${data.name}$`, 'i') },
+        client_id: data.client_id
+      });
+      if (existingProduct) {
+        throw new Error(`A product with the name "${data.name}" already exists for this client`);
+      }
+    }
+    const product = await models.Product.create(data);
+    return { id: product._id.toString() };
+  }
+
+  async deleteProduct(id) {
+    await models.Product.findByIdAndDelete(id);
     return { changes: 1 };
   }
 
@@ -305,17 +345,21 @@ class DatabaseAdapter {
       .populate('resource_id')
       .populate('client_id')
       .populate('manager_id')
-      .sort({ report_date: -1 })
+      .populate('product_id')
+      .sort({ updatedAt: -1 })
       .lean();
     
     return reports.map(r => ({
       ...r,
       id: r._id.toString(),
       resource_name: r.resource_id?.username,
-      client_name: r.client_id?.name,
+      // Use snapshot values for historical integrity
+      client_name: r.client_name_snapshot || r.client_id?.name || '',
+      product_name: r.product_name_snapshot || r.product_id?.name || '',
       manager_name: r.manager_id?.username,
       resource_id: r.resource_id?._id.toString(),
       client_id: r.client_id?._id.toString(),
+      product_id: r.product_id?._id?.toString() || null,
       manager_id: r.manager_id?._id.toString()
     }));
   }
@@ -326,7 +370,10 @@ class DatabaseAdapter {
   }
 
   async updatePerformanceReport(id, data) {
-    await models.PerformanceReport.findByIdAndUpdate(id, data);
+    await models.PerformanceReport.findByIdAndUpdate(id, data, { 
+      new: true,
+      runValidators: true 
+    });
     return { changes: 1 };
   }
 

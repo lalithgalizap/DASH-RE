@@ -8,6 +8,7 @@ const Permission = require('./Permission');
 const RolePermission = require('./RolePermission');
 const MetricSnapshot = require('./MetricSnapshot');
 const Client = require('./Client');
+const Product = require('./Product');
 const PerformanceReport = require('./PerformanceReport');
 const WeeklyUpdate = require('./WeeklyUpdate');
 const ExportSchedule = require('./ExportSchedule');
@@ -23,6 +24,7 @@ module.exports = {
   RolePermission,
   MetricSnapshot,
   Client,
+  Product,
   PerformanceReport,
   WeeklyUpdate,
   ExportSchedule

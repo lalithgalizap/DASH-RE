@@ -181,23 +181,37 @@ const checkAndSendExport = async () => {
   }
 };
 
+// Concurrency guard to prevent overlapping executions
+let isRunning = false;
+
 // Initialize the scheduled job
 const initializePortfolioExportJob = () => {
   console.log('[PortfolioExport] Initializing scheduled job...');
 
   // Run every minute to check if it's time to send
-  const job = cron.schedule('* * * * *', async () => {
-    try {
-      await checkAndSendExport();
-    } catch (err) {
-      console.error('[PortfolioExport] Scheduled job error:', err);
+  const job = cron.schedule('* * * * *', () => {
+    // Non-blocking: fire and forget
+    if (isRunning) {
+      console.log('[PortfolioExport] Previous execution still running, skipping...');
+      return;
     }
+    
+    isRunning = true;
+    
+    // Run async without blocking cron
+    checkAndSendExport()
+      .catch(err => {
+        console.error('[PortfolioExport] Scheduled job error:', err);
+      })
+      .finally(() => {
+        isRunning = false;
+      });
   }, {
     scheduled: true,
     timezone: 'America/Chicago' // CST timezone
   });
 
-  console.log('[PortfolioExport] Job initialized - checking every minute');
+  console.log('[PortfolioExport] Job initialized - checking every minute (non-blocking)');
 
   return job;
 };

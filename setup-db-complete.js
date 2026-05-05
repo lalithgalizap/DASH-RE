@@ -50,6 +50,7 @@ async function setupDatabase() {
       { permission_name: 'view_portfolio', description: 'Can view portfolio dashboard' },
       { permission_name: 'edit_portfolio_health', description: 'Can edit Portfolio Health' },
       { permission_name: 'manage_clients', description: 'Can create and delete global clients' },
+      { permission_name: 'manage_products', description: 'Can create and delete global products' },
       { permission_name: 'manage_roles', description: 'Can create, edit, and delete roles' },
       { permission_name: 'view_roles', description: 'Can view roles' },
       { permission_name: 'manage_closure_docs', description: 'Can upload and delete closure documents' },
@@ -162,14 +163,14 @@ async function setupDatabase() {
     await RolePermission.insertMany(pmRolePermissions);
     console.log('Linked permissions to PM');
 
-    // PMO: view_dashboard, view_projects, add_delete_projects, edit_projects, view_portfolio, manage_import, manage_closure_docs
-    const pmoPerms = getPermIds(['view_dashboard', 'view_projects', 'add_delete_projects', 'edit_projects', 'view_portfolio', 'manage_import', 'manage_closure_docs']);
+    // PMO: view_dashboard, view_projects, add_delete_projects, edit_projects, view_portfolio, manage_import, manage_closure_docs, manage_clients, manage_products
+    const pmoPerms = getPermIds(['view_dashboard', 'view_projects', 'add_delete_projects', 'edit_projects', 'view_portfolio', 'manage_import', 'manage_closure_docs', 'manage_clients', 'manage_products']);
     const pmoRolePermissions = pmoPerms.map(pid => ({ role_id: pmoRole._id, permission_id: pid }));
     await RolePermission.insertMany(pmoRolePermissions);
     console.log('Linked permissions to PMO');
 
-    // CSP: view_dashboard, view_portfolio, manage_portfolio, view_projects, manage_import, view_performance, manage_performance
-    const cspPerms = getPermIds(['view_dashboard', 'view_portfolio', 'view_projects', 'manage_import', 'view_performance', 'manage_performance']);
+    // CSP: view_dashboard, view_portfolio, manage_portfolio, view_projects, manage_import, view_performance, manage_performance, manage_clients, manage_products
+    const cspPerms = getPermIds(['view_dashboard', 'view_portfolio', 'view_projects', 'manage_import', 'view_performance', 'manage_performance', 'manage_clients', 'manage_products']);
     const cspRolePermissions = cspPerms.map(pid => ({ role_id: cspRole._id, permission_id: pid }));
     await RolePermission.insertMany(cspRolePermissions);
     console.log('Linked permissions to CSP');

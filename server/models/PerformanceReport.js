@@ -11,6 +11,19 @@ const performanceReportSchema = new mongoose.Schema({
     ref: 'Client',
     required: true
   },
+  client_name_snapshot: {
+    type: String,
+    required: true
+  },
+  product_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Product',
+    default: null
+  },
+  product_name_snapshot: {
+    type: String,
+    default: ''
+  },
   manager_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

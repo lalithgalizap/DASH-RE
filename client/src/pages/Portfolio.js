@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Users, Settings, Mail, Briefcase, BarChart3, TrendingUp, CheckCircle } from 'lucide-react';
+import { Filter, Plus, Download, X, ChevronDown, ChevronLeft, ChevronRight, FolderKanban, CheckCircle2, AlertCircle, MoreHorizontal, FileText, Search, Settings, Briefcase, BarChart3, TrendingUp, CheckCircle } from 'lucide-react';
 import PortfolioMetrics from '../components/PortfolioMetrics';
 import { useAuth } from '../contexts/AuthContext';
 import { 
@@ -22,8 +22,8 @@ import {
   SummaryModal,
   RAGCategoryModal,
   ProjectInfoModal,
-  ClientManagementModal,
-  ExportSettingsModal
+  ExportSettingsModal,
+  ClientManagementModal
 } from '../components/Portfolio';
 import './Portfolio.css';
 
@@ -49,8 +49,8 @@ function PortfolioContent() {
   const [clientSearchQuery, setClientSearchQuery] = useState('');
   const [showClientDropdown, setShowClientDropdown] = useState(false);
   const [tableViewMode, setTableViewMode] = useState('detailed'); // 'default' or 'detailed'
-  const [showClientManagement, setShowClientManagement] = useState(false);
   const [showExportSettings, setShowExportSettings] = useState(false);
+  const [showClientManagement, setShowClientManagement] = useState(false);
   const [allClients, setAllClients] = useState(['All']);
 
   useEffect(() => {
@@ -274,43 +274,6 @@ function PortfolioContent() {
           marginBottom: '20px',
           padding: '0 4px'
         }}>
-          {hasPermission('clients', 'manage') && (
-            <button
-              onClick={() => setShowClientManagement(true)}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#4f46e5';
-                e.currentTarget.style.color = '#ffffff';
-                e.currentTarget.style.borderColor = '#4f46e5';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(79, 70, 229, 0.25)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#ffffff';
-                e.currentTarget.style.color = '#4f46e5';
-                e.currentTarget.style.borderColor = '#c7d2fe';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
-              style={{
-                marginRight: '12px',
-                padding: '8px 16px',
-                backgroundColor: '#ffffff',
-                border: '1.5px solid #c7d2fe',
-                borderRadius: '10px',
-                fontSize: '13px',
-                fontWeight: 600,
-                color: '#4f46e5',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.2s ease',
-                outline: 'none'
-              }}
-            >
-              <Users size={15} />
-              Manage Clients
-            </button>
-          )}
           <div style={{ position: 'relative' }}>
             <div 
               onClick={() => setShowClientDropdown(!showClientDropdown)}
@@ -783,12 +746,6 @@ function PortfolioContent() {
         project={selectedProjectForModal}
         isOpen={!!selectedProjectForModal}
         onClose={() => setSelectedProjectForModal(null)}
-      />
-
-      {/* Client Management Modal */}
-      <ClientManagementModal
-        isOpen={showClientManagement}
-        onClose={() => setShowClientManagement(false)}
       />
 
       {/* Export Settings Modal */}

@@ -1,25 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import {
   ChevronLeft, Users, User, Building2,
-  Upload, FileText, X, CheckCircle, Trash2, Calendar, Pencil,
-  BarChart3, TrendingUp, FileBarChart, Filter, Info, Search, Eye
+  Upload, FileText, X, CheckCircle, Trash2, Pencil, Search, Eye
 } from 'lucide-react';
 import './Performance.css';
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend
-} from 'recharts';
 
 function Performance() {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Initialize state from URL params
   const [view, setView] = useState(searchParams.get('view') || 'clients');
   const [clients, setClients] = useState([]);
+  const [products, setProducts] = useState([]);
   const [resources, setResources] = useState([]);
   const [reports, setReports] = useState([]);
   const [selectedClient, setSelectedClient] = useState(null);
@@ -30,7 +25,6 @@ function Performance() {
   const [showUpload, setShowUpload] = useState(false);
   const [uploadForm, setUploadForm] = useState({ quarter: 'Q1', year: new Date().getFullYear(), file: null });
   const [extracting, setExtracting] = useState(false);
-  const [extractData, setExtractData] = useState(null);
 
   // Review/confirm modal state
   const [showConfirm, setShowConfirm] = useState(false);
@@ -45,7 +39,6 @@ function Performance() {
 
   // Metrics / dashboard state
   const [metrics, setMetrics] = useState(null);
-  const [metricsLoading, setMetricsLoading] = useState(false);
   const [selectedClientFilter, setSelectedClientFilter] = useState('');
   const [noReportResources, setNoReportResources] = useState([]);
   const [showNoReportModal, setShowNoReportModal] = useState(false);
@@ -57,6 +50,8 @@ function Performance() {
   const [resourceFilters, setResourceFilters] = useState({
     client: '',
     status: '',
+    quarter: '',
+    year: '',
     search: ''
   });
 
@@ -66,10 +61,11 @@ function Performance() {
     year: ''
   });
 
-  const { user, canManagePerformance, canViewGlobalPerformance } = useAuth();
+  const { user, canManagePerformance } = useAuth();
 
   useEffect(() => {
     fetchClients();
+    fetchProducts();
     fetchMetrics();
     fetchAllResources();
     
@@ -80,6 +76,7 @@ function Performance() {
     };
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchClients = async () => {
@@ -94,9 +91,17 @@ function Performance() {
     }
   };
 
+  const fetchProducts = async () => {
+    try {
+      const response = await axios.get('/api/products');
+      setProducts(response.data);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    }
+  };
+
   const fetchMetrics = async () => {
     try {
-      setMetricsLoading(true);
       const url = selectedClientFilter
         ? `/api/performance/metrics?client_id=${selectedClientFilter}`
         : '/api/performance/metrics';
@@ -109,8 +114,6 @@ function Performance() {
       setNoReportResources(combined);
     } catch (error) {
       console.error('Error fetching metrics:', error);
-    } finally {
-      setMetricsLoading(false);
     }
   };
 
@@ -128,14 +131,27 @@ function Performance() {
     }
   }, []);
 
-  const fetchAllResources = useCallback(async () => {
+  const fetchAllResources = useCallback(async (filters = {}) => {
     try {
-      const response = await axios.get('/api/performance/resources');
+      const params = new URLSearchParams();
+      if (filters.quarter) params.append('quarter', filters.quarter);
+      if (filters.year) params.append('year', filters.year);
+      
+      const url = `/api/performance/resources${params.toString() ? '?' + params.toString() : ''}`;
+      const response = await axios.get(url);
       setAllResources(response.data);
     } catch (error) {
       console.error('Error fetching all resources:', error);
     }
   }, []);
+
+  // Refetch resources when quarter or year filter changes
+  useEffect(() => {
+    fetchAllResources({ 
+      quarter: resourceFilters.quarter, 
+      year: resourceFilters.year 
+    });
+  }, [resourceFilters.quarter, resourceFilters.year, fetchAllResources]);
 
   const fetchReports = useCallback(async (resourceId) => {
     try {
@@ -188,6 +204,7 @@ function Performance() {
     if (currentView !== view) {
       setView(currentView);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   const updateUrlParams = (newView, clientId = null, resourceId = null) => {
@@ -239,7 +256,6 @@ function Performance() {
   const openUpload = () => {
     setShowUpload(true);
     setUploadForm({ quarter: 'Q1', year: new Date().getFullYear(), file: null });
-    setExtractData(null);
     setShowConfirm(false);
   };
 
@@ -258,12 +274,13 @@ function Performance() {
       const response = await axios.post('/api/performance/extract', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      setExtractData(response.data);
       // Pre-populate confirm form with extracted data
       const s = response.data.suggestions || {};
       setConfirmForm({
         quarter: uploadForm.quarter,
         year: uploadForm.year,
+        client_id: selectedResource?.client_id || '',
+        product_id: '',
         period_start: '', period_end: '',
         overall_status: s.overall_status || '',
         overall_reasons: s.overall_reasons || '',
@@ -298,17 +315,21 @@ function Performance() {
 
   const handleSaveReport = async () => {
     try {
-      // Get client_id from selectedClient or fallback to selectedResource.client_id
-      const clientId = selectedClient?.id || selectedResource?.client_id || selectedResource?.clientId;
-      if (!clientId) {
-        alert('Error: Could not determine client for this resource');
+      // Validate client_id and product_id
+      if (!confirmForm.client_id) {
+        alert('Please select a client');
+        return;
+      }
+      if (!confirmForm.product_id) {
+        alert('Please select a product');
         return;
       }
       
       const isManagerRole = String(selectedResource.role_name || selectedResource.role || '').toLowerCase() === 'manager';
       const payload = {
         resource_id: selectedResource.id,
-        client_id: clientId,
+        client_id: confirmForm.client_id,
+        product_id: confirmForm.product_id,
         manager_id: selectedResource.manager_id || selectedResource.managerId || (isManagerRole ? selectedResource.id : user?.id || ''),
         ...confirmForm
       };
@@ -319,7 +340,6 @@ function Performance() {
       }
       setShowConfirm(false);
       setConfirmForm({});
-      setExtractData(null);
       setEditingReport(null);
       fetchReports(selectedResource.id);
       fetchMetrics();
@@ -327,6 +347,8 @@ function Performance() {
       if (selectedClient?.id) {
         fetchResources(selectedClient.id);
       }
+      // Also refresh all resources list for the main dashboard
+      fetchAllResources();
     } catch (error) {
       alert(error.response?.data?.error || 'Failed to save report');
     }
@@ -337,6 +359,8 @@ function Performance() {
     setConfirmForm({
       quarter: report.quarter,
       year: report.year,
+      client_id: report.client_id || '',
+      product_id: report.product_id || '',
       period_start: report.period_start || '',
       period_end: report.period_end || '',
       overall_status: report.overall_status || '',
@@ -404,67 +428,6 @@ function Performance() {
     return colors[Math.abs(hash) % colors.length];
   };
 
-  const Gauge = ({ percentage, label, sublabel, color }) => {
-    // Calculate needle rotation (-90 to 90 degrees)
-    const rotation = -90 + (percentage * 1.8);
-
-    // SVG arc parameters
-    const centerX = 90;
-    const centerY = 90;
-    const radius = 70;
-    const strokeWidth = 18;
-
-    // Create arc path for 180 degrees (semi-circle)
-    const arcPath = (startAngle, endAngle) => {
-      const start = polarToCartesian(centerX, centerY, radius, endAngle);
-      const end = polarToCartesian(centerX, centerY, radius, startAngle);
-      const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
-      return `M ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArcFlag} 0 ${end.x} ${end.y}`;
-    };
-
-    const polarToCartesian = (cx, cy, r, angle) => {
-      const angleInRadians = (angle - 180) * Math.PI / 180;
-      return {
-        x: cx + r * Math.cos(angleInRadians),
-        y: cy + r * Math.sin(angleInRadians)
-      };
-    };
-
-    // Arc segments: Red (0-33%), Amber (33-66%), Green (66-100%)
-    const redPath = arcPath(0, 60);
-    const amberPath = arcPath(60, 120);
-    const greenPath = arcPath(120, 180);
-
-    return (
-      <div className="gauge-wrapper">
-        <div className="gauge-container">
-          <svg className="gauge-svg" viewBox="0 0 180 100">
-            {/* Background arc (gray) */}
-            <path d={arcPath(0, 180)} className="gauge-bg-arc" />
-
-            {/* Colored segments - Red (left/poor) */}
-            <path d={redPath} fill="none" stroke="#ef4444" strokeWidth={strokeWidth} strokeLinecap="butt" />
-
-            {/* Amber (middle/average) */}
-            <path d={amberPath} fill="none" stroke="#f59e0b" strokeWidth={strokeWidth} strokeLinecap="butt" />
-
-            {/* Green (right/excellent) */}
-            <path d={greenPath} fill="none" stroke="#22c55e" strokeWidth={strokeWidth} strokeLinecap="butt" />
-          </svg>
-
-          {/* Needle */}
-          <div className="gauge-needle-wrapper">
-            <div className="gauge-needle" style={{ transform: `rotate(${rotation}deg)` }}></div>
-          </div>
-          <div className="gauge-center"></div>
-          <div className="gauge-score-number">{percentage}%</div>
-        </div>
-        <div className="gauge-label" style={{ color }}>{label}</div>
-        <div className="gauge-sublabel">{sublabel}</div>
-      </div>
-    );
-  };
-
   if (loading && view === 'clients') {
     return (
       <div className="performance-page">
@@ -514,51 +477,6 @@ function Performance() {
           {/* Dashboard Metrics */}
           {metrics && (
             <div className="metrics-cards-row three-col">
-              <div className="metric-card-large metric-card-compact">
-                <h5>Overall Performance</h5>
-                <div className="metric-card-body">
-                  <div className="metric-gauge-left">
-                    <Gauge
-                      percentage={metrics.totalWithLatestReport > 0 ? metrics.overallScore : 0}
-                      label={metrics.totalWithLatestReport > 0
-                        ? metrics.overallScore >= 85 ? 'Excellent'
-                        : metrics.overallScore >= 70 ? 'Good'
-                        : metrics.overallScore >= 50 ? 'Average'
-                        : metrics.overallScore >= 33 ? 'Below Average'
-                        : 'Poor'
-                        : 'N/A'}
-                      color={metrics.totalWithLatestReport > 0
-                        ? metrics.overallScore >= 70 ? '#22c55e'
-                        : metrics.overallScore >= 50 ? '#f59e0b'
-                        : '#ef4444'
-                        : '#94a3b8'}
-                      sublabel={metrics.totalWithLatestReport > 0
-                        ? `Score: ${(metrics.overallScore / 20).toFixed(1)} / 5`
-                        : 'No reports'}
-                    />
-                  </div>
-                  <div className="metric-text-right">
-                    <div className="metric-big-value" style={{ color: metrics.totalWithLatestReport > 0 ? (metrics.overallScore >= 70 ? '#22c55e' : metrics.overallScore >= 50 ? '#f59e0b' : '#ef4444') : '#94a3b8' }}>
-                      {metrics.totalWithLatestReport > 0 ? `${metrics.overallScore}%` : '—'}
-                    </div>
-                    <div className="metric-big-label">
-                      {metrics.totalWithLatestReport > 0
-                        ? metrics.overallScore >= 85 ? 'Excellent'
-                        : metrics.overallScore >= 70 ? 'Good'
-                        : metrics.overallScore >= 50 ? 'Average'
-                        : metrics.overallScore >= 33 ? 'Below Average'
-                        : 'Poor'
-                        : 'N/A'}
-                    </div>
-                    <div className="metric-big-sublabel">
-                      {metrics.totalWithLatestReport > 0
-                        ? `${metrics.totalWithLatestReport} rated of ${(metrics.totalResources || 0) + (metrics.totalManagers || 0)}`
-                        : 'No performance reports'}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
               <div
                 className="metric-card-large metric-card-compact"
                 onClick={() => (metrics.totalWithoutReport?.total || noReportResources.length) > 0 && setShowNoReportModal(true)}
@@ -620,42 +538,66 @@ function Performance() {
 
                 {/* Resource Filters */}
                 <div className="resource-filters compact">
-                  <div className="filter-group">
-                    <input
-                      type="text"
-                      placeholder="Search resources..."
-                      value={resourceFilters.search}
-                      onChange={e => setResourceFilters({ ...resourceFilters, search: e.target.value })}
-                      className="filter-input"
-                    />
-                  </div>
-                  <div className="filter-group">
-                    <select
-                      value={resourceFilters.client}
-                      onChange={e => setResourceFilters({ ...resourceFilters, client: e.target.value })}
-                      className="filter-select"
+                  <input
+                    type="text"
+                    placeholder="Search resources..."
+                    value={resourceFilters.search}
+                    onChange={e => setResourceFilters({ ...resourceFilters, search: e.target.value })}
+                    className="filter-input"
+                  />
+                  <select
+                    value={resourceFilters.client}
+                    onChange={e => setResourceFilters({ ...resourceFilters, client: e.target.value })}
+                    className="filter-select"
+                  >
+                    <option value="">All Clients</option>
+                    {clients.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={resourceFilters.quarter}
+                    onChange={e => setResourceFilters({ ...resourceFilters, quarter: e.target.value })}
+                    className="filter-select"
+                  >
+                    <option value="">All Quarters</option>
+                    <option value="Q1">Q1</option>
+                    <option value="Q2">Q2</option>
+                    <option value="Q3">Q3</option>
+                    <option value="Q4">Q4</option>
+                  </select>
+                  <select
+                    value={resourceFilters.year}
+                    onChange={e => setResourceFilters({ ...resourceFilters, year: e.target.value })}
+                    className="filter-select"
+                  >
+                    <option value="">All Years</option>
+                    <option value="2024">2024</option>
+                    <option value="2025">2025</option>
+                    <option value="2026">2026</option>
+                    <option value="2027">2027</option>
+                  </select>
+                  <select
+                    value={resourceFilters.status}
+                    onChange={e => setResourceFilters({ ...resourceFilters, status: e.target.value })}
+                    className="filter-select"
+                  >
+                    <option value="">All Recommendations</option>
+                    <option value="continue_strong">Continue (Strong)</option>
+                    <option value="continue_meets">Continue (Meets)</option>
+                    <option value="continue_improvement">Continue (Plan)</option>
+                    <option value="role_change">Role Change</option>
+                    <option value="replacement">Replacement/Backfill</option>
+                    <option value="none">No Report</option>
+                  </select>
+                  {(resourceFilters.search || resourceFilters.client || resourceFilters.quarter || resourceFilters.year || resourceFilters.status) && (
+                    <button
+                      className="clear-filters-btn"
+                      onClick={() => setResourceFilters({ client: '', status: '', quarter: '', year: '', search: '' })}
                     >
-                      <option value="">All Clients</option>
-                      {clients.map(c => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="filter-group">
-                    <select
-                      value={resourceFilters.status}
-                      onChange={e => setResourceFilters({ ...resourceFilters, status: e.target.value })}
-                      className="filter-select"
-                    >
-                      <option value="">All Recommendations</option>
-                      <option value="continue_strong">Continue (Strong)</option>
-                      <option value="continue_meets">Continue (Meets)</option>
-                      <option value="continue_improvement">Continue (Plan)</option>
-                      <option value="role_change">Role Change</option>
-                      <option value="replacement">Replacement/Backfill</option>
-                      <option value="none">No Report</option>
-                    </select>
-                  </div>
+                      ✕ Clear
+                    </button>
+                  )}
                 </div>
 
                 <div className="data-table-container">
@@ -665,7 +607,7 @@ function Performance() {
                         <th>RESOURCE</th>
                         <th>CLIENT</th>
                         <th>ROLE / TEAM</th>
-                        <th>RECOMMENDATION</th>
+                        <th>SCORECARD</th>
                         <th>RATING</th>
                         <th>LAST REPORT</th>
                         <th>ACTIONS</th>
@@ -681,7 +623,11 @@ function Performance() {
                           return matchesSearch && matchesClient && matchesStatus;
                         })
                         .map(resource => {
-                          const clientName = clients.find(c => c.id === resource.client_id)?.name || '—';
+                          // Use client from latest report snapshot, fallback to user's assigned client
+                          const clientName = resource.latest_report?.client_name_snapshot 
+                            || resource.latest_report?.client_name 
+                            || clients.find(c => c.id === resource.client_id)?.name 
+                            || '—';
                           const lastReportDate = resource.latest_report?.updatedAt 
                             ? `${new Date(resource.latest_report.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · ${resource.latest_report.quarter ? (resource.latest_report.quarter.toString().startsWith('Q') ? resource.latest_report.quarter : `Q${resource.latest_report.quarter}`) : '—'} ${resource.latest_report.year || '—'}`
                             : '—';
@@ -702,20 +648,28 @@ function Performance() {
                                 </span>
                               </td>
                               <td>
-                                <span className={`recommendation-badge ${resource.latest_report?.recommendation || 'none'}`}>
-                                  {(() => {
-                                    const rec = resource.latest_report?.recommendation;
-                                    if (!rec) return '—';
-                                    const recMap = {
-                                      continue_strong: 'Continue (Strong)',
-                                      continue_meets: 'Continue (Meets)',
-                                      continue_improvement: 'Continue (Plan)',
-                                      role_change: 'Role Change Recommended',
-                                      replacement: 'Replacement/Backfill Recommended'
-                                    };
-                                    return recMap[rec] || rec;
-                                  })()}
-                                </span>
+                                {resource.latest_report ? (
+                                  <div className="scorecard-inline">
+                                    <div className={`scorecard-metric delivery-${resource.latest_report.delivery || 'none'}`}>
+                                      <span className="metric-label">Delivery</span>
+                                      <span className="metric-value">{statusLabel(resource.latest_report.delivery, { yes: 'Yes', mostly: 'Mostly', not: 'Not' })}</span>
+                                    </div>
+                                    <div className={`scorecard-metric quality-${resource.latest_report.quality || 'none'}`}>
+                                      <span className="metric-label">Quality</span>
+                                      <span className="metric-value">{statusLabel(resource.latest_report.quality, { good: 'Good', mixed: 'Mixed', poor: 'Poor' })}</span>
+                                    </div>
+                                    <div className={`scorecard-metric rework-${resource.latest_report.rework || 'none'}`}>
+                                      <span className="metric-label">Rework</span>
+                                      <span className="metric-value">{statusLabel(resource.latest_report.rework, { high: 'High', medium: 'Medium', low: 'Low' })}</span>
+                                    </div>
+                                    <div className={`scorecard-metric communication-${resource.latest_report.communication || 'none'}`}>
+                                      <span className="metric-label">Comm.</span>
+                                      <span className="metric-value">{statusLabel(resource.latest_report.communication, { effective: 'Effective', needs_improvement: 'Needs Imp.' })}</span>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <span className="na-text">—</span>
+                                )}
                               </td>
                               <td>
                                 <div className="rating-display">
@@ -762,51 +716,6 @@ function Performance() {
           {/* Dashboard Metrics for selected client */}
           {metrics && selectedClient && (
             <div className="metrics-cards-row three-col">
-              <div className="metric-card-large metric-card-compact">
-                <h5>Overall Performance</h5>
-                <div className="metric-card-body">
-                  <div className="metric-gauge-left">
-                    <Gauge
-                      percentage={metrics.totalWithLatestReport > 0 ? metrics.overallScore : 0}
-                      label={metrics.totalWithLatestReport > 0
-                        ? metrics.overallScore >= 85 ? 'Excellent'
-                        : metrics.overallScore >= 70 ? 'Good'
-                        : metrics.overallScore >= 50 ? 'Average'
-                        : metrics.overallScore >= 33 ? 'Below Average'
-                        : 'Poor'
-                        : 'N/A'}
-                      color={metrics.totalWithLatestReport > 0
-                        ? metrics.overallScore >= 70 ? '#22c55e'
-                        : metrics.overallScore >= 50 ? '#f59e0b'
-                        : '#ef4444'
-                        : '#94a3b8'}
-                      sublabel={metrics.totalWithLatestReport > 0
-                        ? `Score: ${(metrics.overallScore / 20).toFixed(1)} / 5`
-                        : 'No reports'}
-                    />
-                  </div>
-                  <div className="metric-text-right">
-                    <div className="metric-big-value" style={{ color: metrics.totalWithLatestReport > 0 ? (metrics.overallScore >= 70 ? '#22c55e' : metrics.overallScore >= 50 ? '#f59e0b' : '#ef4444') : '#94a3b8' }}>
-                      {metrics.totalWithLatestReport > 0 ? `${metrics.overallScore}%` : '—'}
-                    </div>
-                    <div className="metric-big-label">
-                      {metrics.totalWithLatestReport > 0
-                        ? metrics.overallScore >= 85 ? 'Excellent'
-                        : metrics.overallScore >= 70 ? 'Good'
-                        : metrics.overallScore >= 50 ? 'Average'
-                        : metrics.overallScore >= 33 ? 'Below Average'
-                        : 'Poor'
-                        : 'N/A'}
-                    </div>
-                    <div className="metric-big-sublabel">
-                      {metrics.totalWithLatestReport > 0
-                        ? `${metrics.totalWithLatestReport} rated of ${(metrics.totalResources || 0) + (metrics.totalManagers || 0)}`
-                        : 'No performance reports'}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
               <div
                 className="metric-card-large metric-card-compact"
                 onClick={() => (metrics.totalWithoutReport?.total || noReportResources.length) > 0 && setShowNoReportModal(true)}
@@ -1008,6 +917,8 @@ function Performance() {
                       <tr>
                         <th>QUARTER</th>
                         <th>YEAR</th>
+                        <th>CLIENT</th>
+                        <th>PRODUCT</th>
                         <th>STATUS</th>
                         <th>SCORECARD</th>
                         <th>RECOMMENDATION</th>
@@ -1029,6 +940,12 @@ function Performance() {
                           </td>
                           <td>{report.year}</td>
                           <td>
+                            <span className="client-badge">{report.client_name_snapshot || report.client_name || '—'}</span>
+                          </td>
+                          <td>
+                            <span className="product-name">{report.product_name_snapshot || report.product_name || '—'}</span>
+                          </td>
+                          <td>
                             <span 
                               className="status-badge" 
                               style={{ 
@@ -1040,11 +957,23 @@ function Performance() {
                             </span>
                           </td>
                           <td>
-                            <div className="scorecard-summary">
-                              <span>D: {statusLabel(report.delivery, { yes: 'Y', mostly: 'M', not: 'N' })}</span>
-                              <span>Q: {statusLabel(report.quality, { good: 'G', mixed: 'M', poor: 'P' })}</span>
-                              <span>R: {statusLabel(report.rework, { high: 'H', medium: 'M', low: 'L' })}</span>
-                              <span>C: {statusLabel(report.communication, { effective: 'E', needs_improvement: 'N' })}</span>
+                            <div className="scorecard-inline">
+                              <div className={`scorecard-metric delivery-${report.delivery || 'none'}`}>
+                                <span className="metric-label">Delivery</span>
+                                <span className="metric-value">{statusLabel(report.delivery, { yes: 'Yes', mostly: 'Mostly', not: 'Not' })}</span>
+                              </div>
+                              <div className={`scorecard-metric quality-${report.quality || 'none'}`}>
+                                <span className="metric-label">Quality</span>
+                                <span className="metric-value">{statusLabel(report.quality, { good: 'Good', mixed: 'Mixed', poor: 'Poor' })}</span>
+                              </div>
+                              <div className={`scorecard-metric rework-${report.rework || 'none'}`}>
+                                <span className="metric-label">Rework</span>
+                                <span className="metric-value">{statusLabel(report.rework, { high: 'High', medium: 'Medium', low: 'Low' })}</span>
+                              </div>
+                              <div className={`scorecard-metric communication-${report.communication || 'none'}`}>
+                                <span className="metric-label">Comm.</span>
+                                <span className="metric-value">{statusLabel(report.communication, { effective: 'Effective', needs_improvement: 'Needs Imp.' })}</span>
+                              </div>
                             </div>
                           </td>
                           <td>
@@ -1175,6 +1104,44 @@ function Performance() {
                   <div className="form-group">
                     <label>Year</label>
                     <input type="number" value={confirmForm.year} onChange={e => setConfirmForm({ ...confirmForm, year: parseInt(e.target.value) || '' })} />
+                  </div>
+                </div>
+
+                {/* Client and Product Selection */}
+                <h4 className="section-title">Client & Product</h4>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Client *</label>
+                    <select 
+                      value={confirmForm.client_id} 
+                      onChange={e => setConfirmForm({ ...confirmForm, client_id: e.target.value, product_id: '' })}
+                      required
+                    >
+                      <option value="">Select Client</option>
+                      {clients.map(client => (
+                        <option key={client.id || client._id} value={client.id || client._id}>
+                          {client.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Product *</label>
+                    <select 
+                      value={confirmForm.product_id} 
+                      onChange={e => setConfirmForm({ ...confirmForm, product_id: e.target.value })}
+                      disabled={!confirmForm.client_id}
+                      required
+                    >
+                      <option value="">Select Product</option>
+                      {products
+                        .filter(p => p.client_id === confirmForm.client_id)
+                        .map(product => (
+                          <option key={product.id || product._id} value={product.id || product._id}>
+                            {product.name}
+                          </option>
+                        ))}
+                    </select>
                   </div>
                 </div>
 
@@ -1317,6 +1284,14 @@ function Performance() {
                   <div className="detail-item">
                     <label>Resource Name</label>
                     <strong>{selectedReport.resource_name || selectedResource?.username || '—'}</strong>
+                  </div>
+                  <div className="detail-item">
+                    <label>Client</label>
+                    <strong>{selectedReport.client_name_snapshot || selectedReport.client_name || '—'}</strong>
+                  </div>
+                  <div className="detail-item">
+                    <label>Product</label>
+                    <strong>{selectedReport.product_name_snapshot || selectedReport.product_name || '—'}</strong>
                   </div>
                   <div className="detail-item">
                     <label>Role / Team</label>
