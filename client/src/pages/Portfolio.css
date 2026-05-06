@@ -662,7 +662,19 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 14px;
+  table-layout: fixed;
 }
+
+/* Column widths for the Portfolio Health inline table */
+.portfolio-table th:nth-child(1) { width: 160px; }   /* Project Name */
+.portfolio-table th:nth-child(2) { width: 100px; }   /* SPOC */
+.portfolio-table th:nth-child(3) { width: 90px;  }   /* RAG */
+.portfolio-table th:nth-child(4) { width: 110px; }   /* Status */
+.portfolio-table th:nth-child(5) { width: auto;  }   /* Action Item */
+.portfolio-table th:nth-child(6) { width: auto;  }   /* Risk Summary */
+.portfolio-table th:nth-child(7) { width: auto;  }   /* Mitigation Plan */
+.portfolio-table th:nth-child(8) { width: 155px; }   /* Updated At */
+.portfolio-table th:nth-child(9) { width: 90px;  }   /* Actions */
 
 .portfolio-table thead {
   background-color: #1f2937;
@@ -694,6 +706,10 @@
 .portfolio-table td {
   padding: 16px;
   vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 0; /* forces overflow: hidden to work with table-layout: fixed */
 }
 
 /* Cell Styles */

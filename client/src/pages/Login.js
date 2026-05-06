@@ -47,7 +47,22 @@ const Login = () => {
     const result = await login(username, password);
     
     if (result.success) {
-      navigate('/');
+      // Redirect to the first page the user has access to
+      const perms = result.user?.permissions || [];
+      const hasP = (action, resource) => perms.includes(`${action}_${resource}`);
+      const role  = result.user?.role_name || result.user?.role || '';
+
+      if (hasP('view', 'dashboard')) {
+        navigate('/');
+      } else if (hasP('view', 'portfolio')) {
+        navigate('/portfolio');
+      } else if (hasP('view', 'performance')) {
+        navigate('/performance');
+      } else if (hasP('view', 'weekly_updates')) {
+        navigate('/weekly-updates');
+      } else {
+        navigate('/');
+      }
     } else {
       setError(result.error);
     }

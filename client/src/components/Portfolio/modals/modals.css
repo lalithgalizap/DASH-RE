@@ -274,3 +274,41 @@
   background-color: var(--color-primary-100);
   color: var(--color-primary-700);
 }
+
+/* --------------------------------------------------------------------------
+   Action Buttons (View / Edit in tables)
+   -------------------------------------------------------------------------- */
+.action-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  border: 1px solid;
+  cursor: pointer;
+  background-color: white;
+}
+
+.view-btn {
+  color: #6b7280;
+  border-color: #d1d5db;
+}
+
+.view-btn:hover {
+  color: #2563eb;
+  border-color: #2563eb;
+  background-color: #eff6ff;
+}
+
+.edit-btn {
+  color: #3b82f6;
+  border-color: #bfdbfe;
+}
+
+.edit-btn:hover {
+  color: #ffffff;
+  background-color: #3b82f6;
+  border-color: #3b82f6;
+}

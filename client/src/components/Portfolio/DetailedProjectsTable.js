@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { Edit2, Download } from 'lucide-react';
+import { Edit2, Download, Eye } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useAuth } from '../../contexts/AuthContext';
-import { getRAGColor as getRAGColorUtil, getProjectOwner, formatDate } from './utils';
+import { getProjectOwner, formatDate } from './utils';
 import EditProjectDetailModal from './modals/EditProjectDetailModal';
+import ProjectViewModal from './modals/ProjectViewModal';
 import './modals/modals.css';
 
 function DetailedProjectsTable({ projects, onProjectClick, onProjectUpdate }) {
@@ -13,6 +14,7 @@ function DetailedProjectsTable({ projects, onProjectClick, onProjectUpdate }) {
   const [modalViewMode, setModalViewMode] = useState('detailed');
   const [modalSearch, setModalSearch] = useState('');
   const [editingProject, setEditingProject] = useState(null);
+  const [viewingProject, setViewingProject] = useState(null);
 
   const sortedProjects = useMemo(() => {
     const getTimestamp = (p) => new Date(p.dashboardUpdatedAt || p.lastModified || p.updated_at || 0);
@@ -143,32 +145,41 @@ function DetailedProjectsTable({ projects, onProjectClick, onProjectUpdate }) {
               {displayedProjects.map((project) => (
                 <tr key={project._id || project.id} className="project-row">
                   <td onClick={() => onProjectClick(project)} style={{ cursor: 'pointer' }}>
-                    <div className="project-name-cell clickable">
-                      {project.name}
-                      <svg className="external-link-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <div className="project-name-cell clickable" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{project.name}</span>
+                      <svg className="external-link-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
                         <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
                         <polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" />
                       </svg>
                     </div>
                   </td>
-                  <td><div style={{ fontSize: '13px', color: '#374151' }}>{project.spoc || '—'}</div></td>
+                  <td><div style={{ fontSize: '13px', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{project.spoc || '—'}</div></td>
                   <td>
                     <div className="rag-cell">
                       <span className="rag-indicator" style={{ backgroundColor: ragColor(project.ragStatus) }} />
                       <span className="rag-text">{project.ragStatus || 'Green'}</span>
                     </div>
                   </td>
-                  <td><div className="tooltip-cell" style={{ fontSize: '13px', color: '#374151' }} title={project.sowStatus || '—'}>{project.sowStatus || '—'}</div></td>
-                  <td><div className="tooltip-cell" style={{ fontSize: '13px', color: '#374151' }} title={project.actionItem || '—'}><span className="ellipsis-text">{project.actionItem || '—'}</span></div></td>
-                  <td><div className="tooltip-cell" style={{ fontSize: '13px', color: '#374151' }} title={project.riskSummary || '—'}><span className="ellipsis-text">{project.riskSummary || '—'}</span></div></td>
-                  <td><div className="tooltip-cell" style={{ fontSize: '13px', color: '#374151' }} title={project.mitigationPlan || '—'}><span className="ellipsis-text">{project.mitigationPlan || '—'}</span></div></td>
+                  <td><div className="tooltip-cell" style={{ fontSize: '13px', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={project.sowStatus || '—'}>{project.sowStatus || '—'}</div></td>
+                  <td><div className="tooltip-cell" style={{ fontSize: '13px', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={project.actionItem || '—'}><span className="ellipsis-text">{project.actionItem || '—'}</span></div></td>
+                  <td><div className="tooltip-cell" style={{ fontSize: '13px', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={project.riskSummary || '—'}><span className="ellipsis-text">{project.riskSummary || '—'}</span></div></td>
+                  <td><div className="tooltip-cell" style={{ fontSize: '13px', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={project.mitigationPlan || '—'}><span className="ellipsis-text">{project.mitigationPlan || '—'}</span></div></td>
                   <td><div style={{ fontSize: '13px', color: '#374151' }} title={formatUpdatedAt(project.dashboardUpdatedAt)}>{formatUpdatedAt(project.dashboardUpdatedAt)}</div></td>
                   <td style={{ textAlign: 'center' }}>
-                    {hasPermission('portfolio_health', 'edit') && (
-                      <button className="action-btn edit-btn" onClick={() => setEditingProject(project)} title="Edit Details">
-                        <Edit2 size={14} />
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                      <button
+                        className="action-btn view-btn"
+                        onClick={() => setViewingProject(project)}
+                        title="View Details"
+                      >
+                        <Eye size={14} />
                       </button>
-                    )}
+                      {hasPermission('portfolio_health', 'edit') && (
+                        <button className="action-btn edit-btn" onClick={() => setEditingProject(project)} title="Edit Details">
+                          <Edit2 size={14} />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -304,6 +315,7 @@ function DetailedProjectsTable({ projects, onProjectClick, onProjectUpdate }) {
                     projects={modalFilteredProjects}
                     onProjectClick={onProjectClick}
                     onEditProject={setEditingProject}
+                    onViewProject={setViewingProject}
                     hasPermission={hasPermission}
                     ragColor={ragColor}
                     formatUpdatedAt={formatUpdatedAt}
@@ -312,6 +324,7 @@ function DetailedProjectsTable({ projects, onProjectClick, onProjectUpdate }) {
                   <ModalMetricsTable
                     projects={modalFilteredProjects}
                     onProjectClick={onProjectClick}
+                    onViewProject={setViewingProject}
                   />
                 )}
               </div>
@@ -329,6 +342,12 @@ function DetailedProjectsTable({ projects, onProjectClick, onProjectUpdate }) {
           setEditingProject(null);
         }}
       />
+
+      <ProjectViewModal
+        project={viewingProject}
+        isOpen={!!viewingProject}
+        onClose={() => setViewingProject(null)}
+      />
     </div>
   );
 }
@@ -338,7 +357,7 @@ export default DetailedProjectsTable;
 /* ─────────────────────────────────────────────
    Portfolio Health table (inside modal)
 ───────────────────────────────────────────── */
-function ModalDetailedTable({ projects, onProjectClick, onEditProject, hasPermission, ragColor, formatUpdatedAt }) {
+function ModalDetailedTable({ projects, onProjectClick, onEditProject, onViewProject, hasPermission, ragColor, formatUpdatedAt }) {
   const COLS = [
     { label: 'Project Name', width: null },
     { label: 'SPOC',         width: '110px' },
@@ -408,15 +427,24 @@ function ModalDetailedTable({ projects, onProjectClick, onEditProject, hasPermis
             <td style={{ padding: '11px 14px', fontSize: '13px', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={project.mitigationPlan || '—'}>{project.mitigationPlan || '—'}</td>
             <td style={{ padding: '11px 14px', fontSize: '12px', color: '#6b7280', whiteSpace: 'nowrap' }}>{formatUpdatedAt(project.dashboardUpdatedAt)}</td>
             <td style={{ padding: '11px 14px', textAlign: 'center' }}>
-              {hasPermission('portfolio_health', 'edit') && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                 <button
-                  onClick={() => onEditProject(project)}
-                  style={{ background: 'none', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '4px 7px', cursor: 'pointer', color: '#6b7280', display: 'inline-flex', alignItems: 'center' }}
-                  title="Edit Details"
+                  onClick={() => onViewProject(project)}
+                  style={{ background: 'none', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '4px 7px', cursor: 'pointer', color: '#2563eb', display: 'inline-flex', alignItems: 'center' }}
+                  title="View Details"
                 >
-                  <Edit2 size={13} />
+                  <Eye size={13} />
                 </button>
-              )}
+                {hasPermission('portfolio_health', 'edit') && (
+                  <button
+                    onClick={() => onEditProject(project)}
+                    style={{ background: 'none', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '4px 7px', cursor: 'pointer', color: '#6b7280', display: 'inline-flex', alignItems: 'center' }}
+                    title="Edit Details"
+                  >
+                    <Edit2 size={13} />
+                  </button>
+                )}
+              </div>
             </td>
           </tr>
         ))}
@@ -428,7 +456,7 @@ function ModalDetailedTable({ projects, onProjectClick, onEditProject, hasPermis
 /* ─────────────────────────────────────────────
    Portfolio Metrics table (inside modal)
 ───────────────────────────────────────────── */
-function ModalMetricsTable({ projects, onProjectClick }) {
+function ModalMetricsTable({ projects, onProjectClick, onViewProject }) {
   const COLS = [
     { label: 'Project',      width: null },
     { label: 'Owner',        width: '130px' },
@@ -438,6 +466,7 @@ function ModalMetricsTable({ projects, onProjectClick }) {
     { label: 'Risks',        width: '80px',  center: true },
     { label: 'Issues',       width: '80px',  center: true },
     { label: 'Last Updated', width: '145px' },
+    { label: 'Actions',      width: '70px',  center: true },
   ];
 
   return (
@@ -508,6 +537,15 @@ function ModalMetricsTable({ projects, onProjectClick }) {
             </td>
             <td style={{ padding: '11px 14px', fontSize: '12px', color: '#6b7280', whiteSpace: 'nowrap' }}>
               {formatDate(project.lastModified || project.updated_at)}
+            </td>
+            <td style={{ padding: '11px 14px', textAlign: 'center' }}>
+              <button
+                onClick={() => onViewProject(project)}
+                style={{ background: 'none', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '4px 7px', cursor: 'pointer', color: '#2563eb', display: 'inline-flex', alignItems: 'center' }}
+                title="View Details"
+              >
+                <Eye size={13} />
+              </button>
             </td>
           </tr>
         ))}

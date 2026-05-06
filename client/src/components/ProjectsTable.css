@@ -264,6 +264,17 @@
   background-color: #3b82f6;
 }
 
+.view-btn {
+  color: #6b7280;
+  border-color: #d1d5db;
+}
+
+.view-btn:hover {
+  color: #2563eb;
+  border-color: #2563eb;
+  background-color: #eff6ff;
+}
+
 .delete-btn {
   color: #ef4444;
   border-color: #ef4444;

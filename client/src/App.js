@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
-import { ProtectedRoute, AdminRoute } from './components/ProtectedRoute';
+import { ProtectedRoute, AdminRoute, AdminOrCSPRoute } from './components/ProtectedRoute';
 import Header from './components/Header';
 import Dashboard from './pages/Dashboard';
 import ProjectDetail from './pages/ProjectDetail';
@@ -48,9 +48,9 @@ function App() {
               </ProtectedRoute>
             } />
             <Route path="/clients" element={
-              <ProtectedRoute requirePermission resource="clients" action="manage">
+              <AdminOrCSPRoute>
                 <Clients />
-              </ProtectedRoute>
+              </AdminOrCSPRoute>
             } />
             <Route path="/admin/users" element={
               <AdminRoute>

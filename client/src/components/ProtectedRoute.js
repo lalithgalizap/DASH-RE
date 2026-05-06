@@ -20,10 +20,6 @@ export const ProtectedRoute = ({ children, requirePermission, resource, action }
 
   if (requirePermission && resource && action) {
     if (!hasPermission(resource, action)) {
-      // If user has weekly_updates view permission, redirect there instead of showing denied
-      if (hasPermission('weekly_updates', 'view')) {
-        return <Navigate to="/weekly-updates" replace />;
-      }
       return (
         <div className="access-denied">
           <h2>Access Denied</h2>
@@ -31,6 +27,35 @@ export const ProtectedRoute = ({ children, requirePermission, resource, action }
         </div>
       );
     }
+  }
+
+  return children;
+};
+
+// Restricts a route to Admin or CSP roles only
+export const AdminOrCSPRoute = ({ children }) => {
+  const { isAuthenticated, loading, isAdmin, isCSP } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (!isAdmin() && !isCSP()) {
+    return (
+      <div className="access-denied">
+        <h2>Access Denied</h2>
+        <p>You don't have permission to access this page.</p>
+      </div>
+    );
   }
 
   return children;
