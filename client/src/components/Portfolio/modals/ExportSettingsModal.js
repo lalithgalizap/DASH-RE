@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { X, Plus, Trash2, Mail, Clock, Calendar, FileText, Send, Save, Settings } from 'lucide-react';
+import { X, Plus, Trash2, Mail, Clock, Calendar, Save, Settings } from 'lucide-react';
 
 const DAYS = [
   { value: 'sunday', label: 'Sunday' },
@@ -21,7 +21,6 @@ function ExportSettingsModal({ isOpen, onClose }) {
   const [scheduleDay, setScheduleDay] = useState('friday');
   const [scheduleTime, setScheduleTime] = useState('18:00');
   const [recipients, setRecipients] = useState(['']);
-  const [format, setFormat] = useState('csv');
   const [isActive, setIsActive] = useState(false);
   const [lastSent, setLastSent] = useState(null);
   const [lastSentStatus, setLastSentStatus] = useState(null);
@@ -42,7 +41,6 @@ function ExportSettingsModal({ isOpen, onClose }) {
       setScheduleDay(data.scheduleDay || 'friday');
       setScheduleTime(data.scheduleTime || '18:00');
       setRecipients(data.recipients?.length > 0 ? data.recipients : ['']);
-      setFormat(data.format || 'csv');
       setIsActive(data.isActive || false);
       setLastSent(data.lastSent);
       setLastSentStatus(data.lastSentStatus);
@@ -90,39 +88,12 @@ function ExportSettingsModal({ isOpen, onClose }) {
         scheduleDay,
         scheduleTime,
         recipients: validRecipients,
-        format,
         isActive: true
       });
       setSuccess('Export schedule saved successfully');
       setIsActive(true);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to save export schedule');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleTestEmail = async () => {
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
-
-    const validRecipients = recipients.filter(email => email.trim() !== '');
-
-    if (validRecipients.length === 0) {
-      setError('Please add at least one recipient email');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const response = await axios.post('/api/export-schedule/test', {
-        recipients: validRecipients,
-        format
-      });
-      setSuccess(response.data.message || 'Test email sent successfully');
-    } catch (err) {
-      setError(err.response?.data?.error || 'Failed to send test email');
     } finally {
       setLoading(false);
     }
@@ -428,57 +399,7 @@ function ExportSettingsModal({ isOpen, onClose }) {
             </div>
           </div>
 
-          {/* Format Section */}
-          <div>
-            <label style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '14px',
-              fontWeight: '600',
-              color: '#374151',
-              marginBottom: '12px'
-            }}>
-              <FileText size={16} />
-              Export Format
-            </label>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button
-                onClick={() => setFormat('csv')}
-                style={{
-                  flex: 1,
-                  padding: '12px 16px',
-                  borderRadius: '8px',
-                  border: `2px solid ${format === 'csv' ? '#2563eb' : '#e2e8f0'}`,
-                  backgroundColor: format === 'csv' ? '#eff6ff' : 'white',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: format === 'csv' ? '600' : '500',
-                  color: format === 'csv' ? '#2563eb' : '#64748b',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                CSV
-              </button>
-              <button
-                onClick={() => setFormat('excel')}
-                style={{
-                  flex: 1,
-                  padding: '12px 16px',
-                  borderRadius: '8px',
-                  border: `2px solid ${format === 'excel' ? '#2563eb' : '#e2e8f0'}`,
-                  backgroundColor: format === 'excel' ? '#eff6ff' : 'white',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: format === 'excel' ? '600' : '500',
-                  color: format === 'excel' ? '#2563eb' : '#64748b',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                Excel
-              </button>
-            </div>
-          </div>
+          {/* Format Section — removed */}
 
           {/* Error/Success Messages */}
           {error && (
@@ -508,29 +429,6 @@ function ExportSettingsModal({ isOpen, onClose }) {
 
           {/* Action Buttons */}
           <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
-            <button
-              onClick={handleTestEmail}
-              disabled={loading}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                padding: '12px 16px',
-                borderRadius: '8px',
-                border: '1px solid #e2e8f0',
-                backgroundColor: 'white',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                fontSize: '14px',
-                fontWeight: '500',
-                color: loading ? '#94a3b8' : '#374151',
-                flex: 1,
-                opacity: loading ? 0.6 : 1
-              }}
-            >
-              <Send size={16} />
-              Send Test
-            </button>
             <button
               onClick={handleManualTrigger}
               disabled={loading}

@@ -53,7 +53,7 @@ function EditProjectDetailModal({ project, isOpen, onClose, onSave }) {
   if (!isOpen || !project) return null;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 1100 }}>
       <div className="modal project-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Edit Project Details - {project.name}</h2>
