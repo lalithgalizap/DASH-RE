@@ -338,6 +338,10 @@ class DatabaseAdapter {
   async getPerformanceReports(filter = {}) {
     const query = {};
     if (filter.resource_id) query.resource_id = filter.resource_id;
+    // Bulk fetch: match any of the provided resource IDs in one query
+    if (filter.resource_ids && filter.resource_ids.length > 0) {
+      query.resource_id = { $in: filter.resource_ids };
+    }
     if (filter.client_id) query.client_id = filter.client_id;
     if (filter.manager_id) query.manager_id = filter.manager_id;
     

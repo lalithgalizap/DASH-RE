@@ -45,6 +45,10 @@ function Performance() {
   const [noReportSearch, setNoReportSearch] = useState('');
   const [noReportRoleFilter, setNoReportRoleFilter] = useState('all'); // 'all' | 'manager' | 'resource'
 
+  // Scorecard drill-down modal
+  const [scorecardModal, setScorecardModal] = useState(null);
+  // { category: 'delivery', option: 'yes', label: 'Delivery — Yes', color: '#16a34a', resources: [...] }
+
   // All resources state and filters
   const [allResources, setAllResources] = useState([]);
   const [resourceFilters, setResourceFilters] = useState({
@@ -502,51 +506,183 @@ function Performance() {
           )}
 
           {/* Dashboard Metrics */}
-          {metrics && (
-            <div className="metrics-cards-row three-col">
-              <div
-                className="metric-card-large metric-card-compact"
-                onClick={() => (metrics.totalWithoutReport?.total || noReportResources.length) > 0 && setShowNoReportModal(true)}
-                style={{ cursor: (metrics.totalWithoutReport?.total || noReportResources.length) > 0 ? 'pointer' : 'default' }}
-              >
-                <h5>Total Resources</h5>
-                <div className="metric-card-body total-resources-body">
-                  <div className="metric-big-value">{metrics.totalResources + (metrics.totalManagers || 0)}</div>
-                  <div className="metric-text-block">
-                    <div className="metric-big-label">Resources &amp; Managers</div>
-                    {metrics.totalWithoutReport?.total > 0 ? (
-                      <div className="metric-missing-breakdown">
-                        <span className="highlight-missing">Without Reports: {metrics.totalWithoutReport.total}</span>
-                        <div className="missing-detail">
-                          <span className="missing-dot manager-dot"></span> Managers: {metrics.totalWithoutReport.managers}
-                          <span className="missing-dot resource-dot"></span> Resources: {metrics.totalWithoutReport.resources}
+          {metrics && (() => {
+            // Compute filtered resources for metrics cards
+            const filteredForMetrics = allResources.filter(r => {
+              const matchesSearch = !resourceFilters.search || r.username?.toLowerCase().includes(resourceFilters.search.toLowerCase());
+              const matchesClient = resourceFilters.client.length === 0 || resourceFilters.client.includes(r.client_id);
+              const matchesStatus = resourceFilters.status.length === 0 ||
+                resourceFilters.status.some(status =>
+                  status === 'none' ? !r.latest_report : r.latest_report?.recommendation === status
+                );
+              return matchesSearch && matchesClient && matchesStatus;
+            });
+
+            const totalFiltered = filteredForMetrics.length;
+            const withReport = filteredForMetrics.filter(r => r.latest_report).length;
+            const withoutReport = totalFiltered - withReport;
+
+            // Always show Red / Amber / Green rows
+            const distRows = [
+              { name: 'Red',   color: '#ef4444', value: filteredForMetrics.filter(r => r.latest_report?.overall_status === 'red').length },
+              { name: 'Amber', color: '#f59e0b', value: filteredForMetrics.filter(r => r.latest_report?.overall_status === 'amber').length },
+              { name: 'Green', color: '#22c55e', value: filteredForMetrics.filter(r => r.latest_report?.overall_status === 'green').length },
+            ];
+
+            // Scorecard breakdown — count each option across filtered resources with reports
+            const sc = { delivery: {}, quality: {}, rework: {}, communication: {} };
+            filteredForMetrics.forEach(r => {
+              const rep = r.latest_report;
+              if (!rep) return;
+              if (rep.delivery)      sc.delivery[rep.delivery]           = (sc.delivery[rep.delivery] || 0) + 1;
+              if (rep.quality)       sc.quality[rep.quality]             = (sc.quality[rep.quality] || 0) + 1;
+              if (rep.rework)        sc.rework[rep.rework]               = (sc.rework[rep.rework] || 0) + 1;
+              if (rep.communication) sc.communication[rep.communication] = (sc.communication[rep.communication] || 0) + 1;
+            });
+
+            const scCategories = [
+              {
+                key: 'delivery', label: 'Delivery',
+                options: [
+                  { value: 'yes',    label: 'Yes',    color: '#16a34a' },
+                  { value: 'mostly', label: 'Mostly', color: '#f59e0b' },
+                  { value: 'not',    label: 'Not',    color: '#dc2626' },
+                ]
+              },
+              {
+                key: 'quality', label: 'Quality',
+                options: [
+                  { value: 'good',  label: 'Good',  color: '#16a34a' },
+                  { value: 'mixed', label: 'Mixed', color: '#f59e0b' },
+                  { value: 'poor',  label: 'Poor',  color: '#dc2626' },
+                ]
+              },
+              {
+                key: 'rework', label: 'Rework',
+                options: [
+                  { value: 'low',    label: 'Low',    color: '#16a34a' },
+                  { value: 'medium', label: 'Medium', color: '#f59e0b' },
+                  { value: 'high',   label: 'High',   color: '#dc2626' },
+                ]
+              },
+              {
+                key: 'communication', label: 'Communication',
+                options: [
+                  { value: 'effective',         label: 'Effective',    color: '#16a34a' },
+                  { value: 'needs_improvement', label: 'Needs Imp.',   color: '#f59e0b' },
+                ]
+              },
+            ];
+
+            return (
+              <div className="metrics-cards-row three-col">
+                <div
+                  className="metric-card-large metric-card-compact"
+                  onClick={() => withoutReport > 0 && setShowNoReportModal(true)}
+                  style={{ cursor: withoutReport > 0 ? 'pointer' : 'default' }}
+                >
+                  <h5>Total Resources</h5>
+                  <div className="metric-card-body total-resources-body">
+                    <div className="metric-big-value">{totalFiltered}</div>
+                    <div className="metric-text-block">
+                      <div className="metric-big-label">Resources &amp; Managers</div>
+                      {withoutReport > 0 ? (
+                        <div className="metric-missing-breakdown">
+                          <span className="highlight-missing">Without Reports: {withoutReport}</span>
                         </div>
+                      ) : (
+                        <div className="metric-all-good">
+                          <CheckCircle size={14} color="#22c55e" /> All have reports
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="metric-card-large">
+                  <h5>Performance Distribution</h5>
+                  <div className="distribution-list">
+                    {distRows.map(s => (
+                      <div key={s.name} className="dist-row">
+                        <span className="dist-dot" style={{ background: s.color }}></span>
+                        <span className="dist-name">{s.name}</span>
+                        <span className="dist-count" style={{ color: s.color, fontWeight: 700 }}>
+                          {withReport === 0 ? 'N/A' : s.value}
+                        </span>
+                        <span className="dist-pct">
+                          {withReport === 0 ? '' : `${Math.round(s.value / withReport * 100)}%`}
+                        </span>
                       </div>
-                    ) : (
-                      <div className="metric-all-good">
-                        <CheckCircle size={14} color="#22c55e" /> All have reports
-                      </div>
+                    ))}
+                    {withReport === 0 && (
+                      <div className="dist-empty" style={{ marginTop: '6px' }}>No reports for current filters</div>
                     )}
                   </div>
                 </div>
-              </div>
 
-              <div className="metric-card-large">
-                <h5>Performance Distribution</h5>
-                <div className="distribution-list">
-                  {metrics.statusDistribution.filter(s => s.value > 0).map(s => (
-                    <div key={s.name} className="dist-row">
-                      <span className="dist-dot" style={{ background: s.color }}></span>
-                      <span className="dist-name">{s.name}</span>
-                      <span className="dist-count">{s.value}</span>
-                      <span className="dist-pct">{Math.round(s.value / metrics.totalWithLatestReport * 100)}%</span>
+                {/* Scorecard Breakdown Card */}
+                <div className="metric-card-large sc-breakdown-card">
+                  <h5>Scorecard Breakdown</h5>
+                  {withReport === 0 ? (
+                    <div className="dist-empty">No reports for current filters</div>
+                  ) : (
+                    <div className="sc-categories">
+                      {scCategories.map(cat => {
+                        const total = cat.options.reduce((sum, o) => sum + (sc[cat.key][o.value] || 0), 0);
+                        return (
+                          <div key={cat.key} className="sc-category">
+                            <span className="sc-category-label">{cat.label}</span>
+                            <div className="sc-pills">
+                              {cat.options.map(opt => {
+                                const count = sc[cat.key][opt.value] || 0;
+                                const pct = total > 0 ? Math.round(count / total * 100) : 0;
+                                const matchingResources = filteredForMetrics.filter(
+                                  r => r.latest_report?.[cat.key] === opt.value
+                                );
+                                return (
+                                  <span
+                                    key={opt.value}
+                                    className="sc-pill"
+                                    style={{
+                                      background: count > 0 ? `${opt.color}18` : '#f8fafc',
+                                      color: count > 0 ? opt.color : '#cbd5e1',
+                                      border: `1px solid ${count > 0 ? `${opt.color}40` : '#e2e8f0'}`,
+                                      cursor: count > 0 ? 'pointer' : 'default',
+                                    }}
+                                    onClick={() => count > 0 && setScorecardModal({
+                                      label: `${cat.label} — ${opt.label}`,
+                                      color: opt.color,
+                                      resources: matchingResources
+                                    })}
+                                  >
+                                    {opt.label}
+                                    <strong>{count > 0 ? count : '—'}</strong>
+                                  </span>
+                                );
+                              })}
+                              {total > 0 && (
+                                <span className="sc-pct-summary">
+                                  {cat.options.map(o => {
+                                    const count = sc[cat.key][o.value] || 0;
+                                    const pct = Math.round(count / total * 100);
+                                    return (
+                                      <span key={o.value} style={{ color: count > 0 ? o.color : '#cbd5e1' }}>
+                                        {pct}%
+                                      </span>
+                                    );
+                                  })}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  ))}
-                  {metrics.totalWithLatestReport === 0 && <div className="dist-empty">No reports yet</div>}
+                  )}
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {clients.length === 0 ? (
             <div className="empty-state">
@@ -1469,6 +1605,95 @@ function Performance() {
                 </div>
               </div>
 
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SCORECARD DRILL-DOWN MODAL */}
+      {scorecardModal && (
+        <div className="modal-overlay" onClick={() => setScorecardModal(null)}>
+          <div className="modal-content" style={{ maxWidth: '640px' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span
+                  style={{
+                    display: 'inline-block',
+                    width: '12px', height: '12px',
+                    borderRadius: '50%',
+                    background: scorecardModal.color,
+                    flexShrink: 0
+                  }}
+                />
+                {scorecardModal.label}
+                <span style={{ fontSize: '14px', fontWeight: 500, color: '#64748b' }}>
+                  ({scorecardModal.resources.length})
+                </span>
+              </h2>
+              <button className="btn-icon" onClick={() => setScorecardModal(null)}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="modal-body" style={{ padding: '0', maxHeight: '60vh', overflowY: 'auto' }}>
+              <table className="perf-data-table" style={{ width: '100%' }}>
+                <thead>
+                  <tr>
+                    <th>RESOURCE</th>
+                    <th>CLIENT</th>
+                    <th>ROLE / TEAM</th>
+                    <th>QUARTER</th>
+                    <th>RATING</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {scorecardModal.resources.map(resource => {
+                    const clientName = resource.latest_report?.client_name_snapshot
+                      || clients.find(c => c.id === resource.client_id)?.name
+                      || '—';
+                    return (
+                      <tr
+                        key={resource.id}
+                        className="perf-table-row"
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => { handleResourceClick(resource); setScorecardModal(null); }}
+                      >
+                        <td>
+                          <div className="resource-cell">
+                            <div className="resource-avatar" style={{ background: getAvatarColor(resource.username) }}>
+                              {getInitials(resource.username)}
+                            </div>
+                            <span className="resource-name">{resource.username}</span>
+                          </div>
+                        </td>
+                        <td>{clientName}</td>
+                        <td>
+                          <span className="role-team-text">
+                            {resource.latest_report?.role_team || resource.role_name || '—'}
+                          </span>
+                        </td>
+                        <td>
+                          {resource.latest_report?.quarter
+                            ? `${resource.latest_report.quarter} ${resource.latest_report.year}`
+                            : '—'}
+                        </td>
+                        <td>
+                          <div className="rating-display">
+                            {resource.latest_report?.rating ? (
+                              <>
+                                <span className="rating-value">{resource.latest_report.rating}</span>
+                                <span className="rating-stars">
+                                  {'★'.repeat(Math.round(resource.latest_report.rating))}
+                                  {'☆'.repeat(5 - Math.round(resource.latest_report.rating))}
+                                </span>
+                              </>
+                            ) : <span className="rating-empty">—</span>}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>

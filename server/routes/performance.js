@@ -348,50 +348,58 @@ router.get('/resources', authenticate, async (req, res) => {
       return Math.round((totalScore / count) * 10) / 10;
     };
     
-    // Fetch latest report for each resource/manager (sorted by updatedAt desc)
-    // If quarter/year filters are provided, filter reports first before selecting latest
-    const resourcesWithReports = await Promise.all(
-      resources.map(async (resource) => {
-        let reports = await dbAdapter.getPerformanceReports({ resource_id: resource.id });
-        
-        // Apply quarter filter if provided (match any of the selected quarters)
-        if (quarters.length > 0) {
-          reports = reports.filter(r => quarters.includes(r.quarter));
-        }
-        
-        // Apply year filter if provided (match any of the selected years)
-        if (years.length > 0) {
-          reports = reports.filter(r => years.includes(r.year?.toString()));
-        }
-        
-        // Reports are already sorted by updatedAt descending from dbAdapter
-        // Take the first one (most recently updated) after filtering
-        const latestReport = reports[0] || null;
-        return {
-          ...resource,
-          latest_report: latestReport ? {
-            id: latestReport.id,
-            createdAt: latestReport.createdAt,
-            updatedAt: latestReport.updatedAt,
-            overall_status: latestReport.overall_status,
-            quarter: latestReport.quarter,
-            year: latestReport.year,
-            delivery: latestReport.delivery,
-            quality: latestReport.quality,
-            rework: latestReport.rework,
-            communication: latestReport.communication,
-            recommendation: latestReport.recommendation,
-            role_team: latestReport.role_team,
-            rating: calculateRating(latestReport),
-            strengths: latestReport.strengths,
-            areas_of_improvement: latestReport.areas_of_improvement,
-            overall_reasons: latestReport.overall_reasons,
-            client_name_snapshot: latestReport.client_name_snapshot || latestReport.client_name,
-            product_name_snapshot: latestReport.product_name_snapshot || latestReport.product_name
-          } : null
-        };
-      })
-    );
+    // ── OPTIMIZED: fetch ALL reports for all resources in ONE query ──
+    // Then group by resource_id in memory — avoids N+1 (200 queries → 1 query)
+    const resourceIds = resources.map(r => r.id);
+    const allReports = await dbAdapter.getPerformanceReports({ resource_ids: resourceIds });
+
+    // Group reports by resource_id, already sorted by updatedAt desc from dbAdapter
+    const reportsByResource = {};
+    allReports.forEach(r => {
+      const rid = r.resource_id?.toString?.() || r.resource_id;
+      if (!reportsByResource[rid]) reportsByResource[rid] = [];
+      reportsByResource[rid].push(r);
+    });
+
+    const resourcesWithReports = resources.map(resource => {
+      let reports = reportsByResource[resource.id] || [];
+
+      // Apply quarter filter if provided (match any of the selected quarters)
+      if (quarters.length > 0) {
+        reports = reports.filter(r => quarters.includes(r.quarter));
+      }
+
+      // Apply year filter if provided (match any of the selected years)
+      if (years.length > 0) {
+        reports = reports.filter(r => years.includes(r.year?.toString()));
+      }
+
+      // Take the first one (most recently updated) after filtering
+      const latestReport = reports[0] || null;
+      return {
+        ...resource,
+        latest_report: latestReport ? {
+          id: latestReport.id,
+          createdAt: latestReport.createdAt,
+          updatedAt: latestReport.updatedAt,
+          overall_status: latestReport.overall_status,
+          quarter: latestReport.quarter,
+          year: latestReport.year,
+          delivery: latestReport.delivery,
+          quality: latestReport.quality,
+          rework: latestReport.rework,
+          communication: latestReport.communication,
+          recommendation: latestReport.recommendation,
+          role_team: latestReport.role_team,
+          rating: calculateRating(latestReport),
+          strengths: latestReport.strengths,
+          areas_of_improvement: latestReport.areas_of_improvement,
+          overall_reasons: latestReport.overall_reasons,
+          client_name_snapshot: latestReport.client_name_snapshot || latestReport.client_name,
+          product_name_snapshot: latestReport.product_name_snapshot || latestReport.product_name
+        } : null
+      };
+    });
     
     // Filter out resources that don't have a matching report when quarter/year filters are applied
     const filteredResources = (quarters.length > 0 || years.length > 0) 

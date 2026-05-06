@@ -140,42 +140,35 @@ const executeExport = async (schedule) => {
 // Check if it's time to send export (based on schedule)
 const checkAndSendExport = async () => {
   try {
-    // Get active schedule
-    const schedule = await ExportSchedule.findOne({ isActive: true });
-    if (!schedule) {
-      return;
-    }
-
     const now = new Date();
-    const currentDay = now.getDay(); // 0 = Sunday, 5 = Friday
+    const currentDay = now.getDay();
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
+
+    // Get active schedule
+    const schedule = await ExportSchedule.findOne({ isActive: true }).lean();
+    if (!schedule) return;
 
     // Parse schedule time (HH:MM)
     const [scheduleHour, scheduleMinute] = schedule.scheduleTime.split(':').map(Number);
     const scheduledDay = dayToCronMap[schedule.scheduleDay];
 
-    // Check if today is the scheduled day and time matches
-    if (currentDay !== scheduledDay) {
-      return;
-    }
+    // Check day and time match
+    if (currentDay !== scheduledDay) return;
+    if (currentHour !== scheduleHour || currentMinute !== scheduleMinute) return;
 
-    if (currentHour !== scheduleHour || currentMinute !== scheduleMinute) {
-      return;
-    }
-
-    // Check if we already sent today
-    if (schedule.lastSent) {
-      const lastSent = new Date(schedule.lastSent);
-      const today = new Date();
-      if (lastSent.toDateString() === today.toDateString()) {
+    // Check if we already sent today (re-fetch full doc for save)
+    const fullSchedule = await ExportSchedule.findById(schedule._id);
+    if (fullSchedule.lastSent) {
+      const lastSent = new Date(fullSchedule.lastSent);
+      if (lastSent.toDateString() === now.toDateString()) {
         console.log('[PortfolioExport] Already sent today, skipping...');
         return;
       }
     }
 
     // Execute the export
-    await executeExport(schedule);
+    await executeExport(fullSchedule);
   } catch (err) {
     console.error('[PortfolioExport] Error in checkAndSendExport:', err);
   }
@@ -183,37 +176,38 @@ const checkAndSendExport = async () => {
 
 // Concurrency guard to prevent overlapping executions
 let isRunning = false;
+let activeJob = null;
 
 // Initialize the scheduled job
 const initializePortfolioExportJob = () => {
   console.log('[PortfolioExport] Initializing scheduled job...');
 
   // Run every minute to check if it's time to send
-  const job = cron.schedule('* * * * *', () => {
-    // Non-blocking: fire and forget
-    if (isRunning) {
-      console.log('[PortfolioExport] Previous execution still running, skipping...');
-      return;
-    }
-    
+  // Use 'overlap: false' equivalent via isRunning guard
+  // Wrap in setImmediate so the cron callback returns instantly, preventing missed-tick warnings
+  activeJob = cron.schedule('* * * * *', () => {
+    if (isRunning) return; // silently skip — previous run still in progress
+
     isRunning = true;
-    
-    // Run async without blocking cron
-    checkAndSendExport()
-      .catch(err => {
-        console.error('[PortfolioExport] Scheduled job error:', err);
-      })
-      .finally(() => {
-        isRunning = false;
-      });
+
+    // Defer to next event loop tick so cron callback returns immediately
+    setImmediate(() => {
+      checkAndSendExport()
+        .catch(err => {
+          console.error('[PortfolioExport] Scheduled job error:', err);
+        })
+        .finally(() => {
+          isRunning = false;
+        });
+    });
   }, {
     scheduled: true,
-    timezone: 'America/Chicago' // CST timezone
+    timezone: 'America/Chicago'
   });
 
-  console.log('[PortfolioExport] Job initialized - checking every minute (non-blocking)');
+  console.log('[PortfolioExport] Job initialized - checking every minute');
 
-  return job;
+  return activeJob;
 };
 
 // Manual trigger function
