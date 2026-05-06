@@ -350,74 +350,74 @@ const ProjectRadialView = ({ project, isOpen, onClose, onMetricClick }) => {
               );
             })}
           </div>
-          
-          {/* Detail Modal Overlay */}
-          {expandedMetricData && (
-            <div className="radial-detail-overlay" onClick={(e) => {
-              e.stopPropagation();
-              setExpandedMetric(null);
-            }}>
-              <div className="radial-detail-modal" onClick={(e) => e.stopPropagation()}>
-                <div className="radial-detail-header" style={{ borderBottomColor: expandedMetricData.color }}>
-                  <span>{expandedMetricData.fullDetails.title}</span>
-                  <button 
-                    className="radial-detail-close"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setExpandedMetric(null);
-                    }}
-                  >×</button>
-                </div>
-                <div className="radial-detail-content">
-                  {expandedMetricData.fullDetails.columns ? (
-                    // Table format
-                    <table className="radial-detail-table">
-                      <thead>
-                        <tr>
-                          {expandedMetricData.fullDetails.columns.map((col, idx) => (
-                            <th key={idx}>{col}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {expandedMetricData.fullDetails.rows.length > 0 ? (
-                          expandedMetricData.fullDetails.rows.map((row, idx) => (
-                            <tr key={idx}>
-                              <td>{row.id}</td>
-                              <td>{row.title || row.milestone}</td>
-                              <td style={{ color: row.severity === 'High' || row.severity === 'Critical' ? '#dc2626' : '#111827' }}>
-                                {row.severity || row.type || row.status}
-                              </td>
-                              <td>{row.dateRaised || row.plannedEnd}</td>
-                              <td>{row.owner}</td>
-                              <td style={{ color: row.status === 'Open' ? '#dc2626' : '#111827', fontWeight: 500 }}>
-                                {row.status}
-                              </td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan={expandedMetricData.fullDetails.columns.length} style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
-                              No records found
+        </div>
+
+        {/* Detail Modal Overlay — outside radial-container so it covers the full modal */}
+        {expandedMetricData && (
+          <div className="radial-detail-overlay" onClick={(e) => {
+            e.stopPropagation();
+            setExpandedMetric(null);
+          }}>
+            <div className="radial-detail-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="radial-detail-header" style={{ borderBottomColor: expandedMetricData.color }}>
+                <span>{expandedMetricData.fullDetails.title}</span>
+                <button 
+                  className="radial-detail-close"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setExpandedMetric(null);
+                  }}
+                >×</button>
+              </div>
+              <div className="radial-detail-content">
+                {expandedMetricData.fullDetails.columns ? (
+                  // Table format
+                  <table className="radial-detail-table">
+                    <thead>
+                      <tr>
+                        {expandedMetricData.fullDetails.columns.map((col, idx) => (
+                          <th key={idx}>{col}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {expandedMetricData.fullDetails.rows.length > 0 ? (
+                        expandedMetricData.fullDetails.rows.map((row, idx) => (
+                          <tr key={idx}>
+                            <td>{row.id}</td>
+                            <td>{row.title || row.milestone}</td>
+                            <td style={{ color: row.severity === 'High' || row.severity === 'Critical' ? '#dc2626' : '#111827' }}>
+                              {row.severity || row.type || row.status}
+                            </td>
+                            <td>{row.dateRaised || row.plannedEnd}</td>
+                            <td>{row.owner}</td>
+                            <td style={{ color: row.status === 'Open' ? '#dc2626' : '#111827', fontWeight: 500 }}>
+                              {row.status}
                             </td>
                           </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  ) : (
-                    // Simple list format (fallback)
-                    expandedMetricData.fullDetails.items.map((item, idx) => (
-                      <div key={idx} className="radial-detail-item">
-                        <span className="radial-detail-label">{item.label}</span>
-                        <span className="radial-detail-value">{item.value}</span>
-                      </div>
-                    ))
-                  )}
-                </div>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={expandedMetricData.fullDetails.columns.length} style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
+                            No records found
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                ) : (
+                  // Simple list format (fallback)
+                  expandedMetricData.fullDetails.items.map((item, idx) => (
+                    <div key={idx} className="radial-detail-item">
+                      <span className="radial-detail-label">{item.label}</span>
+                      <span className="radial-detail-value">{item.value}</span>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -33,14 +33,17 @@ const IssueDetailModal = ({ project, onClose }) => {
         maxWidth: '1000px', 
         width: '90%', 
         maxHeight: '80vh', 
-        overflow: 'auto' 
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column'
       }}>
         <div className="modal-header" style={{ 
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'center', 
           padding: '20px', 
-          borderBottom: '1px solid #e5e7eb' 
+          borderBottom: '1px solid #e5e7eb',
+          flexShrink: 0
         }}>
           <div>
             <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 600 }}>{project.name}</h2>
@@ -56,7 +59,7 @@ const IssueDetailModal = ({ project, onClose }) => {
           }}>×</button>
         </div>
         
-        <div className="modal-body" style={{ padding: '20px' }}>
+        <div className="modal-body" style={{ padding: '20px', flex: 1, overflowY: 'auto' }}>
           {issues.length > 0 ? (
             <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse' }}>
               <thead style={{ background: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>

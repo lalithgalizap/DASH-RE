@@ -4,6 +4,7 @@ const { authenticate, requireAdmin } = require('../auth');
 const { sendPortfolioExportEmail } = require('../email');
 const dbAdapter = require('../dbAdapter');
 const xlsx = require('xlsx');
+const { refreshSchedule, triggerManualExport } = require('../jobs/portfolioExportJob');
 
 const router = express.Router();
 
@@ -141,6 +142,9 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
     });
 
     await schedule.save();
+
+    // Reschedule the cron job with the new config
+    refreshSchedule();
 
     res.json({
       success: true,
