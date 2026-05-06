@@ -123,10 +123,8 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
       return res.status(400).json({ error: `Invalid email addresses: ${invalidEmails.join(', ')}` });
     }
 
-    // Validate format
-    if (!['csv', 'excel'].includes(format)) {
-      return res.status(400).json({ error: 'Format must be csv or excel' });
-    }
+    // Validate format — accept xlsx/excel/csv, default to excel
+    const normalizedFormat = ['csv', 'excel', 'xlsx'].includes(format) ? format : 'excel';
 
     // Deactivate existing active schedule
     await ExportSchedule.updateMany({ isActive: true }, { isActive: false });
@@ -136,7 +134,7 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
       scheduleDay,
       scheduleTime,
       recipients,
-      format: format || 'csv',
+      format: normalizedFormat,
       isActive: isActive !== false,
       createdBy: req.user.id
     });

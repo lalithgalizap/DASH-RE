@@ -204,39 +204,28 @@ function DetailedProjectsTable({ projects, onProjectClick, onProjectUpdate }) {
           style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
         >
           <div
+            className="modal-content"
             onClick={e => e.stopPropagation()}
-            style={{
-              backgroundColor: 'white',
-              borderRadius: '12px',
-              width: '92vw',
-              maxWidth: '1100px',
-              /* Fixed height so the modal never resizes */
-              height: '600px',
-              display: 'flex',
-              flexDirection: 'column',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
-              overflow: 'hidden'
-            }}
+            style={{ backgroundColor: 'white', borderRadius: '8px', maxWidth: '1100px', maxHeight: '80vh', overflow: 'auto', width: '92%' }}
           >
-            {/* ── Modal Header ── */}
-            <div style={{
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              padding: '16px 24px', borderBottom: '1px solid #e5e7eb', flexShrink: 0,
-              gap: '16px', minWidth: 0
-            }}>
-              {/* Left: title */}
-              <div style={{ flexShrink: 0 }}>
-                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#0f172a' }}>
-                  All Projects
-                </h2>
-                <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#64748b' }}>
-                  {modalFilteredProjects.length} of {projects.length} project{projects.length !== 1 ? 's' : ''}
-                </p>
-              </div>
+            {/* ── Header ── */}
+            <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px', borderBottom: '1px solid #e5e7eb' }}>
+              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600' }}>
+                All Projects
+              </h2>
+              <button
+                onClick={closeModal}
+                style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#6b7280', lineHeight: 1 }}
+              >
+                ×
+              </button>
+            </div>
 
-              {/* Right: toggle + export + close — never wrap */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                {/* View toggle pill */}
+            {/* ── Body ── */}
+            <div className="modal-body" style={{ padding: '20px' }}>
+              {/* Toggle + Export row */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '12px' }}>
+                {/* View toggle */}
                 <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: '8px', padding: '3px' }}>
                   {[
                     { key: 'detailed', label: 'Portfolio Health' },
@@ -250,22 +239,20 @@ function DetailedProjectsTable({ projects, onProjectClick, onProjectUpdate }) {
                         border: 'none', borderRadius: '6px', cursor: 'pointer',
                         background: modalViewMode === key ? '#2563eb' : 'transparent',
                         color: modalViewMode === key ? 'white' : '#64748b',
-                        transition: 'all 0.15s ease',
-                        whiteSpace: 'nowrap'
+                        transition: 'all 0.15s ease', whiteSpace: 'nowrap'
                       }}
                     >
                       {label}
                     </button>
                   ))}
                 </div>
-
-                {/* Export — always visible */}
+                {/* Export */}
                 <button
                   onClick={() => handleExport(modalFilteredProjects)}
                   style={{
                     display: 'flex', alignItems: 'center', gap: '6px',
                     padding: '7px 14px', fontSize: '13px', fontWeight: 500,
-                    border: '1px solid #e5e7eb', borderRadius: '7px',
+                    border: '1px solid #e5e7eb', borderRadius: '6px',
                     cursor: 'pointer', background: 'white', color: '#374151',
                     whiteSpace: 'nowrap', flexShrink: 0
                   }}
@@ -273,74 +260,61 @@ function DetailedProjectsTable({ projects, onProjectClick, onProjectUpdate }) {
                   <Download size={14} />
                   Export
                 </button>
-
-                {/* Close */}
-                <button
-                  onClick={closeModal}
-                  style={{
-                    background: 'none', border: 'none', fontSize: '22px',
-                    cursor: 'pointer', color: '#64748b', lineHeight: 1,
-                    width: '32px', height: '32px', borderRadius: '6px',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    flexShrink: 0
-                  }}
-                >
-                  ×
-                </button>
               </div>
-            </div>
 
-            {/* ── Search bar ── */}
-            <div style={{ padding: '12px 24px', borderBottom: '1px solid #f1f5f9', flexShrink: 0 }}>
-              <div style={{ position: 'relative', maxWidth: '360px' }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"
-                  style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
-                  <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
-                </svg>
-                <input
-                  type="text"
-                  placeholder="Search by project, client, SPOC or owner…"
-                  value={modalSearch}
-                  onChange={e => setModalSearch(e.target.value)}
-                  style={{
-                    width: '100%', padding: '8px 32px 8px 38px',
-                    fontSize: '13px', border: '1px solid #e5e7eb',
-                    borderRadius: '8px', outline: 'none', color: '#111827',
-                    boxSizing: 'border-box'
-                  }}
-                />
+              {/* Search + result count */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '12px' }}>
+                <div style={{ position: 'relative', flex: 1, maxWidth: '360px' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"
+                    style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+                    <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Search by project, client, SPOC or owner…"
+                    value={modalSearch}
+                    onChange={e => setModalSearch(e.target.value)}
+                    style={{
+                      width: '100%', padding: '8px 32px 8px 38px',
+                      fontSize: '13px', border: '1px solid #e5e7eb',
+                      borderRadius: '8px', outline: 'none', color: '#111827',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                  {modalSearch && (
+                    <button
+                      onClick={() => setModalSearch('')}
+                      style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', display: 'flex', alignItems: 'center' }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                    </button>
+                  )}
+                </div>
                 {modalSearch && (
-                  <button
-                    onClick={() => setModalSearch('')}
-                    style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', display: 'flex', alignItems: 'center' }}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18M6 6l12 12" /></svg>
-                  </button>
+                  <span style={{ fontSize: '12px', color: '#6b7280', whiteSpace: 'nowrap' }}>
+                    Showing {modalFilteredProjects.length} of {projects.length} projects
+                  </span>
                 )}
               </div>
-              {/* Result count — fixed height so it doesn't shift layout */}
-              <div style={{ height: '18px', marginTop: '6px', fontSize: '12px', color: '#6b7280' }}>
-                {modalSearch && `Showing ${modalFilteredProjects.length} of ${projects.length} projects`}
-              </div>
-            </div>
 
-            {/* ── Scrollable table body — fills remaining fixed height ── */}
-            <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
-              {modalViewMode === 'detailed' ? (
-                <ModalDetailedTable
-                  projects={modalFilteredProjects}
-                  onProjectClick={onProjectClick}
-                  onEditProject={setEditingProject}
-                  hasPermission={hasPermission}
-                  ragColor={ragColor}
-                  formatUpdatedAt={formatUpdatedAt}
-                />
-              ) : (
-                <ModalMetricsTable
-                  projects={modalFilteredProjects}
-                  onProjectClick={onProjectClick}
-                />
-              )}
+              {/* Table */}
+              <div style={{ maxHeight: '350px', overflowY: 'auto' }}>
+                {modalViewMode === 'detailed' ? (
+                  <ModalDetailedTable
+                    projects={modalFilteredProjects}
+                    onProjectClick={onProjectClick}
+                    onEditProject={setEditingProject}
+                    hasPermission={hasPermission}
+                    ragColor={ragColor}
+                    formatUpdatedAt={formatUpdatedAt}
+                  />
+                ) : (
+                  <ModalMetricsTable
+                    projects={modalFilteredProjects}
+                    onProjectClick={onProjectClick}
+                  />
+                )}
+              </div>
             </div>
           </div>
         </div>

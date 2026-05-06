@@ -15,13 +15,34 @@ function Clients() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedClient, setSelectedClient] = useState(null); // for detail panel
+  const [selectedClient, setSelectedClient] = useState(null); // for detail modal
+  const [modalVisible, setModalVisible] = useState(false);    // controls animation
 
   useEffect(() => {
     fetchClients();
     fetchProducts();
     fetchProjects();
   }, []);
+
+  // Animate modal in when selectedClient is set
+  useEffect(() => {
+    if (selectedClient) {
+      // tiny delay so the element mounts before the transition fires
+      requestAnimationFrame(() => setModalVisible(true));
+    } else {
+      setModalVisible(false);
+    }
+  }, [selectedClient]);
+
+  const openClientModal = (client) => {
+    setSelectedClient(client);
+  };
+
+  const closeClientModal = () => {
+    setModalVisible(false);
+    // wait for fade-out before unmounting
+    setTimeout(() => setSelectedClient(null), 220);
+  };
 
   const fetchClients = async () => {
     try {
@@ -269,8 +290,8 @@ function Clients() {
         )}
       </div>
 
-      {/* Main content: list + detail panel */}
-      <div className={`cl-content ${selectedClient ? 'with-panel' : ''}`}>
+      {/* Main content: list only (detail is now a modal) */}
+      <div className="cl-content">
         {/* List */}
         <div className="cl-list-section">
           {activeTab === 'clients' ? (
@@ -285,12 +306,10 @@ function Clients() {
                   const clientId = client.id || client._id;
                   const clientProducts = getClientProducts(clientId);
                   const clientProjects = getClientProjects(client.name);
-                  const isSelected = (selectedClient?.id || selectedClient?._id) === clientId;
                   return (
                     <div
                       key={clientId}
-                      className={`cl-card ${isSelected ? 'selected' : ''}`}
-                      onClick={() => setSelectedClient(isSelected ? null : client)}
+                      className={`cl-card`}
                     >
                       <div className="cl-card-left">
                         <div className="cl-avatar">
@@ -309,7 +328,13 @@ function Clients() {
                         </div>
                       </div>
                       <div className="cl-card-actions">
-                        <ChevronRight size={16} color={isSelected ? '#4f46e5' : '#cbd5e1'} />
+                        <button
+                          className="cl-arrow-btn"
+                          onClick={e => { e.stopPropagation(); openClientModal(client); }}
+                          title="View details"
+                        >
+                          <ChevronRight size={16} />
+                        </button>
                         <button
                           className="cl-delete-btn"
                           onClick={e => { e.stopPropagation(); handleDeleteClient(clientId); }}
@@ -336,13 +361,13 @@ function Clients() {
                   return (
                     <div key={productId} className="cl-card">
                       <div className="cl-card-left">
-                        <div className="cl-avatar cl-avatar-purple">
-                          <Package size={18} color="#7c3aed" />
+                        <div className="cl-avatar cl-avatar-product">
+                          <Package size={18} color="#0d9488" />
                         </div>
                         <div className="cl-card-info">
                           <span className="cl-card-name">{product.name}</span>
                           <div className="cl-card-meta">
-                            <span className="cl-meta-pill cl-pill-blue">
+                            <span className="cl-meta-pill cl-pill-teal">
                               <Building2 size={11} /> {product.client_name || '—'}
                             </span>
                             {product.description && (
@@ -364,85 +389,197 @@ function Clients() {
               </div>
             )
           )}
-        </div>
+        </div>{/* end cl-list-section */}
+      </div>{/* end cl-content */}
 
-        {/* Detail Panel */}
-        {selectedClient && (() => {
-          const clientId = selectedClient.id || selectedClient._id;
-          const clientProducts = getClientProducts(clientId);
-          const clientProjects = getClientProjects(selectedClient.name);
-          return (
-            <div className="cl-detail-panel">
-              <div className="cl-panel-header">
-                <div className="cl-panel-title">
-                  <div className="cl-avatar cl-avatar-sm">{selectedClient.name.charAt(0).toUpperCase()}</div>
-                  <span>{selectedClient.name}</span>
-                </div>
-                <button className="cl-panel-close" onClick={() => setSelectedClient(null)}>
-                  <X size={16} />
-                </button>
-              </div>
-
-              {/* Products section */}
-              <div className="cl-panel-section">
-                <div className="cl-panel-section-title">
-                  <Package size={14} color="#7c3aed" />
-                  Products
-                  <span className="cl-panel-count">{clientProducts.length}</span>
-                </div>
-                {clientProducts.length === 0 ? (
-                  <p className="cl-panel-empty">No products assigned</p>
-                ) : (
-                  <div className="cl-panel-list">
-                    {clientProducts.map(p => (
-                      <div key={p.id || p._id} className="cl-panel-item">
-                        <div className="cl-panel-item-dot" style={{ background: '#7c3aed' }} />
-                        <div>
-                          <div className="cl-panel-item-name">{p.name}</div>
-                          {p.description && <div className="cl-panel-item-sub">{p.description}</div>}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Projects section */}
-              <div className="cl-panel-section">
-                <div className="cl-panel-section-title">
-                  <FolderKanban size={14} color="#2563eb" />
-                  Projects
-                  <span className="cl-panel-count">{clientProjects.length}</span>
-                </div>
-                {clientProjects.length === 0 ? (
-                  <p className="cl-panel-empty">No projects associated</p>
-                ) : (
-                  <div className="cl-panel-list">
-                    {clientProjects.map(p => {
-                      const sc = statusColor(p.status);
-                      return (
-                        <div key={p.id || p._id} className="cl-panel-item">
-                          <div className="cl-panel-item-dot" style={{ background: '#2563eb' }} />
-                          <div style={{ flex: 1 }}>
-                            <div className="cl-panel-item-name">{p.name}</div>
-                            {p.status && (
-                              <span className="cl-status-badge" style={{ background: sc.bg, color: sc.text }}>
-                                {p.status}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })()}
-      </div>
+      {/* ── Client Detail Modal ── */}
+      {selectedClient && (() => {
+        const clientId = selectedClient.id || selectedClient._id;
+        const allClientProducts = getClientProducts(clientId);
+        const allClientProjects = getClientProjects(selectedClient.name);
+        return (
+          <ClientDetailModal
+            client={selectedClient}
+            clientProducts={allClientProducts}
+            clientProjects={allClientProjects}
+            visible={modalVisible}
+            onClose={closeClientModal}
+            statusColor={statusColor}
+          />
+        );
+      })()}
     </div>
   );
 }
 
 export default Clients;
+
+/* ─────────────────────────────────────────────
+   Client Detail Modal
+   Fixed 560px height — 6 items visible, rest scrollable
+   Two columns: Projects (left) | Products (right)
+───────────────────────────────────────────── */
+function ClientDetailModal({ client, clientProducts, clientProjects, visible, onClose, statusColor }) {
+  const [projectSearch, setProjectSearch] = React.useState('');
+  const [productSearch, setProductSearch] = React.useState('');
+
+  // Reset search when modal opens for a new client
+  React.useEffect(() => {
+    setProjectSearch('');
+    setProductSearch('');
+  }, [client]);
+
+  const filteredProjects = projectSearch.trim()
+    ? clientProjects.filter(p => p.name?.toLowerCase().includes(projectSearch.toLowerCase()))
+    : clientProjects;
+
+  const filteredProducts = productSearch.trim()
+    ? clientProducts.filter(p =>
+        p.name?.toLowerCase().includes(productSearch.toLowerCase()) ||
+        (p.description || '').toLowerCase().includes(productSearch.toLowerCase())
+      )
+    : clientProducts;
+
+  return (
+    <div
+      className={`cl-modal-overlay ${visible ? 'visible' : ''}`}
+      onClick={onClose}
+    >
+      <div
+        className={`cl-modal ${visible ? 'visible' : ''}`}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* ── Header ── */}
+        <div className="cl-modal-header">
+          <div className="cl-modal-title">
+            <div className="cl-avatar">{client.name.charAt(0).toUpperCase()}</div>
+            <div>
+              <div style={{ fontSize: '20px', fontWeight: 700, color: '#0f172a' }}>{client.name}</div>
+              <div style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>
+                {clientProducts.length} product{clientProducts.length !== 1 ? 's' : ''}
+                &nbsp;·&nbsp;
+                {clientProjects.length} project{clientProjects.length !== 1 ? 's' : ''}
+              </div>
+            </div>
+          </div>
+          <button className="cl-panel-close" onClick={onClose}>
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* ── Two-column body ── */}
+        <div className="cl-modal-body">
+
+          {/* ── Projects column ── */}
+          <div className="cl-modal-col">
+            {/* Column header */}
+            <div className="cl-modal-col-header">
+              <div className="cl-panel-section-title">
+                <FolderKanban size={14} color="#2563eb" />
+                Projects
+                <span className="cl-panel-count">{filteredProjects.length}</span>
+              </div>
+              {/* Search */}
+              <div className="cl-modal-col-search">
+                <Search size={13} color="#9ca3af" className="cl-modal-search-icon" />
+                <input
+                  type="text"
+                  placeholder="Search projects…"
+                  value={projectSearch}
+                  onChange={e => setProjectSearch(e.target.value)}
+                  className="cl-modal-search-input"
+                />
+                {projectSearch && (
+                  <button onClick={() => setProjectSearch('')} className="cl-modal-search-clear">
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Scrollable list — 6 items visible */}
+            <div className="cl-modal-scroll">
+              {filteredProjects.length === 0 ? (
+                <p className="cl-panel-empty">
+                  {projectSearch ? 'No matching projects' : 'No projects associated'}
+                </p>
+              ) : (
+                filteredProjects.map(p => {
+                  const sc = statusColor(p.status);
+                  return (
+                    <div key={p.id || p._id} className="cl-modal-item project">
+                      <div className="cl-modal-item-icon" style={{ background: '#dbeafe' }}>
+                        <FolderKanban size={13} color="#2563eb" />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="cl-panel-item-name">{p.name}</div>
+                        {p.status && (
+                          <span className="cl-status-badge" style={{ background: sc.bg, color: sc.text }}>
+                            {p.status}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* ── Divider ── */}
+          <div className="cl-modal-divider" />
+
+          {/* ── Products column ── */}
+          <div className="cl-modal-col">
+            {/* Column header */}
+            <div className="cl-modal-col-header">
+              <div className="cl-panel-section-title">
+                <Package size={14} color="#0d9488" />
+                Products
+                <span className="cl-panel-count">{filteredProducts.length}</span>
+              </div>
+              {/* Search */}
+              <div className="cl-modal-col-search">
+                <Search size={13} color="#9ca3af" className="cl-modal-search-icon" />
+                <input
+                  type="text"
+                  placeholder="Search products…"
+                  value={productSearch}
+                  onChange={e => setProductSearch(e.target.value)}
+                  className="cl-modal-search-input"
+                />
+                {productSearch && (
+                  <button onClick={() => setProductSearch('')} className="cl-modal-search-clear">
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Scrollable list — 6 items visible */}
+            <div className="cl-modal-scroll">
+              {filteredProducts.length === 0 ? (
+                <p className="cl-panel-empty">
+                  {productSearch ? 'No matching products' : 'No products assigned'}
+                </p>
+              ) : (
+                filteredProducts.map(p => (
+                  <div key={p.id || p._id} className="cl-modal-item product">
+                    <div className="cl-modal-item-icon" style={{ background: '#ccfbf1' }}>
+                      <Package size={13} color="#0d9488" />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="cl-panel-item-name">{p.name}</div>
+                      {p.description && <div className="cl-panel-item-sub">{p.description}</div>}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+        </div>{/* end cl-modal-body */}
+      </div>
+    </div>
+  );
+}

@@ -463,8 +463,8 @@ function Performance() {
     return (
       <div className="performance-page">
         <div className="loading-container">
-          <div className="spinner"></div>
-          <span>Loading clients...</span>
+          <div className="loading-spinner"></div>
+          <p>Loading performance data...</p>
         </div>
       </div>
     );
@@ -993,8 +993,8 @@ function Performance() {
 
           {loading ? (
             <div className="loading-container">
-              <div className="spinner"></div>
-              <span>Loading resources...</span>
+              <div className="loading-spinner"></div>
+              <p>Loading resources...</p>
             </div>
           ) : resources.length === 0 ? (
             <div className="empty-state">
@@ -1089,8 +1089,8 @@ function Performance() {
         <>
           {loading ? (
             <div className="loading-container">
-              <div className="spinner"></div>
-              <span>Loading reports...</span>
+              <div className="loading-spinner"></div>
+              <p>Loading reports...</p>
             </div>
           ) : (
             <div className="reports-section">

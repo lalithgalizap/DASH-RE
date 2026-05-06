@@ -30,7 +30,7 @@
   width: 44px;
   height: 44px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -66,7 +66,7 @@
 .cl-stat-value {
   font-size: 24px;
   font-weight: 700;
-  color: #4f46e5;
+  color: #2563eb;
   line-height: 1;
 }
 
@@ -114,13 +114,13 @@
 
 .cl-tab:hover {
   background: #f8fafc;
-  color: #4f46e5;
+  color: #2563eb;
 }
 
 .cl-tab.active {
-  background: linear-gradient(135deg, #4f46e5, #4338ca);
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
   color: white;
-  box-shadow: 0 2px 8px rgba(79,70,229,0.3);
+  box-shadow: 0 2px 8px rgba(37,99,235,0.3);
 }
 
 .cl-tab-badge {
@@ -171,8 +171,8 @@
 }
 
 .cl-input:focus {
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 3px rgba(79,70,229,0.08);
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.08);
   outline: none;
 }
 
@@ -194,7 +194,7 @@
   align-items: center;
   gap: 6px;
   padding: 10px 18px;
-  background: linear-gradient(135deg, #4f46e5, #4338ca);
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
   color: white;
   border: none;
   border-radius: 8px;
@@ -202,13 +202,13 @@
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(79,70,229,0.25);
+  box-shadow: 0 2px 8px rgba(37,99,235,0.25);
   transition: all 0.15s ease;
   flex-shrink: 0;
 }
 
 .cl-add-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #4338ca, #3730a3);
+  background: linear-gradient(135deg, #1d4ed8, #1e40af);
   transform: translateY(-1px);
 }
 
@@ -297,20 +297,13 @@
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 10px;
-  cursor: pointer;
   transition: all 0.15s ease;
   box-shadow: 0 1px 2px rgba(0,0,0,0.04);
 }
 
 .cl-card:hover {
-  border-color: #c7d2fe;
-  box-shadow: 0 2px 8px rgba(79,70,229,0.08);
-}
-
-.cl-card.selected {
-  border-color: #4f46e5;
-  background: #fafafe;
-  box-shadow: 0 0 0 2px rgba(79,70,229,0.12);
+  border-color: #bfdbfe;
+  box-shadow: 0 2px 8px rgba(37,99,235,0.08);
 }
 
 .cl-card-left {
@@ -321,22 +314,25 @@
   min-width: 0;
 }
 
+/* ── Avatar — blue to match app primary ── */
 .cl-avatar {
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 16px;
   font-weight: 700;
-  color: #4f46e5;
+  color: #2563eb;
   flex-shrink: 0;
 }
 
-.cl-avatar-purple {
-  background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+/* Products use a teal/cyan accent to differentiate from projects (blue) */
+.cl-avatar-product {
+  background: linear-gradient(135deg, #ccfbf1, #99f6e4);
+  color: #0d9488;
 }
 
 .cl-avatar-sm {
@@ -381,9 +377,16 @@
   font-weight: 500;
 }
 
+/* Projects pill — blue */
 .cl-pill-blue {
   background: #dbeafe;
   color: #1e40af;
+}
+
+/* Products pill — teal */
+.cl-pill-teal {
+  background: #ccfbf1;
+  color: #0f766e;
 }
 
 .cl-product-desc {
@@ -396,6 +399,25 @@
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
+}
+
+/* ── Arrow button ── */
+.cl-arrow-btn {
+  background: none;
+  border: 1px solid #e5e7eb;
+  border-radius: 7px;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 5px 7px;
+  display: flex;
+  align-items: center;
+  transition: all 0.15s;
+}
+
+.cl-arrow-btn:hover {
+  background: #eff6ff;
+  border-color: #2563eb;
+  color: #2563eb;
 }
 
 .cl-delete-btn {
@@ -430,63 +452,7 @@
   font-size: 14px;
 }
 
-/* ── Detail Panel ── */
-.cl-detail-panel {
-  width: 320px;
-  flex-shrink: 0;
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-  overflow: hidden;
-  position: sticky;
-  top: 20px;
-}
-
-.cl-panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 16px;
-  border-bottom: 1px solid #f1f5f9;
-  background: #fafafe;
-}
-
-.cl-panel-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 15px;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.cl-panel-close {
-  background: none;
-  border: none;
-  color: #94a3b8;
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  transition: all 0.15s;
-}
-
-.cl-panel-close:hover {
-  background: #f1f5f9;
-  color: #374151;
-}
-
-.cl-panel-section {
-  padding: 14px 16px;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.cl-panel-section:last-child {
-  border-bottom: none;
-}
-
+/* ── Shared panel pieces (used in modal) ── */
 .cl-panel-section-title {
   display: flex;
   align-items: center;
@@ -496,7 +462,6 @@
   color: #374151;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-bottom: 10px;
 }
 
 .cl-panel-count {
@@ -516,31 +481,14 @@
   padding: 4px 0;
 }
 
-.cl-panel-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.cl-panel-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-}
-
-.cl-panel-item-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-top: 5px;
-  flex-shrink: 0;
-}
-
 .cl-panel-item-name {
   font-size: 13px;
   font-weight: 600;
   color: #1e293b;
   line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .cl-panel-item-sub {
@@ -558,21 +506,218 @@
   margin-top: 3px;
 }
 
-/* ── Responsive ── */
-@media (max-width: 900px) {
-  .cl-content.with-panel {
-    flex-direction: column;
-  }
-  .cl-detail-panel {
-    width: 100%;
-    position: static;
-  }
+/* ── Client Detail Modal ── */
+.cl-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.2s ease;
 }
 
+.cl-modal-overlay.visible { opacity: 1; }
+
+.cl-modal {
+  background: white;
+  border-radius: 14px;
+  width: 88vw;
+  max-width: 860px;
+  height: 560px;          /* fixed — never resizes */
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+  transform: translateY(24px) scale(0.97);
+  opacity: 0;
+  transition: transform 0.22s ease, opacity 0.22s ease;
+}
+
+.cl-modal.visible {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}
+
+/* Modal header — fixed strip */
+.cl-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  border-bottom: 1px solid #f1f5f9;
+  background: #f8fafc;
+  flex-shrink: 0;
+}
+
+.cl-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.cl-panel-close {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  transition: all 0.15s;
+}
+
+.cl-panel-close:hover {
+  background: #f1f5f9;
+  color: #374151;
+}
+
+/* Modal body — two equal columns, fills remaining height */
+.cl-modal-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* Each column is a flex column so header stays fixed and list scrolls */
+.cl-modal-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Fixed column header (title + search) */
+.cl-modal-col-header {
+  padding: 14px 20px 10px;
+  flex-shrink: 0;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Search bar inside each column */
+.cl-modal-col-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.cl-modal-search-icon {
+  position: absolute;
+  left: 10px;
+  pointer-events: none;
+}
+
+.cl-modal-search-input {
+  width: 100%;
+  padding: 7px 28px 7px 30px;
+  font-size: 13px;
+  border: 1px solid #e5e7eb;
+  border-radius: 7px;
+  outline: none;
+  color: #0f172a;
+  background: white;
+  font-family: inherit;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+
+.cl-modal-search-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37,99,235,0.08);
+}
+
+.cl-modal-search-input::placeholder { color: #9ca3af; }
+
+.cl-modal-search-clear {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+
+.cl-modal-search-clear:hover { color: #374151; }
+
+/* Scrollable list — fills remaining column height */
+.cl-modal-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.cl-modal-scroll::-webkit-scrollbar { width: 5px; }
+.cl-modal-scroll::-webkit-scrollbar-track { background: #f8fafc; }
+.cl-modal-scroll::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 3px; }
+.cl-modal-scroll::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
+
+/* Vertical divider between columns */
+.cl-modal-divider {
+  width: 1px;
+  background: #f1f5f9;
+  flex-shrink: 0;
+}
+
+/* Item row */
+.cl-modal-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #f1f5f9;
+  border-radius: 8px;
+  background: #fafafa;
+  transition: background 0.12s, border-color 0.12s;
+  flex-shrink: 0;
+}
+
+.cl-modal-item.project:hover {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.cl-modal-item.product:hover {
+  background: #f0fdfa;
+  border-color: #99f6e4;
+}
+
+.cl-modal-item-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ── Responsive ── */
 @media (max-width: 640px) {
   .cl-page { padding: 16px; }
   .cl-header { flex-direction: column; align-items: flex-start; gap: 16px; }
   .cl-form-row { flex-direction: column; }
   .cl-add-btn { width: 100%; justify-content: center; }
   .cl-stats { width: 100%; justify-content: space-around; }
+  .cl-modal { height: 90vh; width: 96vw; }
+  .cl-modal-body { flex-direction: column; }
+  .cl-modal-divider { width: 100%; height: 1px; }
 }

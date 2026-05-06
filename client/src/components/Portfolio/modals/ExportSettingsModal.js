@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { X, Plus, Trash2, Mail, Clock, Calendar, Save, Settings } from 'lucide-react';
+import { X, Plus, Trash2, Mail, Clock, Calendar, Save, Settings, ChevronDown } from 'lucide-react';
 
 const DAYS = [
   { value: 'sunday', label: 'Sunday' },
@@ -27,6 +27,19 @@ function ExportSettingsModal({ isOpen, onClose }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [timeDropdownOpen, setTimeDropdownOpen] = useState(false);
+  const timeDropdownRef = useRef(null);
+
+  // Close time dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (timeDropdownRef.current && !timeDropdownRef.current.contains(e.target)) {
+        setTimeDropdownOpen(false);
+      }
+    };
+    if (timeDropdownOpen) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [timeDropdownOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -88,6 +101,7 @@ function ExportSettingsModal({ isOpen, onClose }) {
         scheduleDay,
         scheduleTime,
         recipients: validRecipients,
+        format: 'excel',
         isActive: true
       });
       setSuccess('Export schedule saved successfully');
@@ -152,7 +166,6 @@ function ExportSettingsModal({ isOpen, onClose }) {
           maxWidth: '520px',
           width: '90%',
           maxHeight: '90vh',
-          overflow: 'auto',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
           display: 'flex',
           flexDirection: 'column'
@@ -225,7 +238,7 @@ function ExportSettingsModal({ isOpen, onClose }) {
         </div>
 
         {/* Content */}
-        <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto' }}>
           {/* Status Badge */}
           <div style={{
             display: 'flex',
@@ -295,26 +308,78 @@ function ExportSettingsModal({ isOpen, onClose }) {
                   <option key={day.value} value={day.value}>Every {day.label}</option>
                 ))}
               </select>
-              <select
-                value={scheduleTime}
-                onChange={(e) => setScheduleTime(e.target.value)}
-                style={{
-                  flex: 1,
-                  padding: '10px 12px',
-                  borderRadius: '8px',
-                  border: '1px solid #e2e8f0',
-                  fontSize: '14px',
-                  color: '#374151',
-                  backgroundColor: 'white',
-                  cursor: 'pointer'
-                }}
-              >
-                {TIMES.map(time => (
-                  <option key={time} value={time}>
-                    {new Date(`2000-01-01T${time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
-                  </option>
-                ))}
-              </select>
+
+              {/* Custom time picker — stays inside modal */}
+              <div ref={timeDropdownRef} style={{ flex: 1, position: 'relative' }}>
+                <button
+                  type="button"
+                  onClick={() => setTimeDropdownOpen(o => !o)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    border: `1px solid ${timeDropdownOpen ? '#2563eb' : '#e2e8f0'}`,
+                    fontSize: '14px',
+                    color: '#374151',
+                    backgroundColor: 'white',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '8px',
+                    textAlign: 'left'
+                  }}
+                >
+                  <span>
+                    {new Date(`2000-01-01T${scheduleTime}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                  </span>
+                  <ChevronDown
+                    size={16}
+                    color="#94a3b8"
+                    style={{ transform: timeDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', flexShrink: 0 }}
+                  />
+                </button>
+
+                {timeDropdownOpen && (
+                  <div style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 4px)',
+                    left: 0,
+                    right: 0,
+                    background: 'white',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                    zIndex: 9999,
+                    maxHeight: '200px',
+                    overflowY: 'auto'
+                  }}>
+                    {TIMES.map(time => {
+                      const label = new Date(`2000-01-01T${time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+                      const isSelected = scheduleTime === time;
+                      return (
+                        <div
+                          key={time}
+                          onMouseDown={() => { setScheduleTime(time); setTimeDropdownOpen(false); }}
+                          style={{
+                            padding: '9px 14px',
+                            fontSize: '14px',
+                            cursor: 'pointer',
+                            color: isSelected ? '#2563eb' : '#374151',
+                            fontWeight: isSelected ? 600 : 400,
+                            backgroundColor: isSelected ? '#eff6ff' : 'transparent',
+                            borderBottom: '1px solid #f8fafc'
+                          }}
+                          onMouseEnter={e => { if (!isSelected) e.currentTarget.style.backgroundColor = '#f8fafc'; }}
+                          onMouseLeave={e => { if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                        >
+                          {label}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
