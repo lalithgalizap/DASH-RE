@@ -151,4 +151,12 @@ const performanceReportSchema = new mongoose.Schema({
   timestamps: true
 });
 
+// ── Indexes for performance metrics aggregation ──────────────────────────────
+// Fastest path for "latest report per resource" (used by /metrics and /resources)
+performanceReportSchema.index({ resource_id: 1, updatedAt: -1 });
+// For client-scoped queries
+performanceReportSchema.index({ client_id: 1, updatedAt: -1 });
+// For quarter distribution
+performanceReportSchema.index({ quarter: 1, year: 1 });
+
 module.exports = mongoose.model('PerformanceReport', performanceReportSchema);

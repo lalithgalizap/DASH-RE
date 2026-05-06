@@ -2,8 +2,103 @@ const express = require('express');
 const dbAdapter = require('../dbAdapter');
 const { authenticate } = require('../auth');
 const { MetricSnapshot } = require('../models');
+const fs   = require('fs');
+const path = require('path');
+const { loadProjectDocuments, calculateProjectMetrics } = require('../utils/projectMetrics');
 
 const router = express.Router();
+
+// ─── Portfolio metrics cache (60-second TTL) ──────────────────────────────────
+// Shared across all requests so 6 concurrent users trigger only 1 Excel parse.
+const portfolioCache = {
+  data:      null,
+  timestamp: 0,
+  TTL:       60 * 1000, // 60 seconds
+  isValid()  { return this.data !== null && (Date.now() - this.timestamp) < this.TTL; },
+  set(data)  { this.data = data; this.timestamp = Date.now(); },
+  clear()    { this.data = null; this.timestamp = 0; }
+};
+
+// Export so upload/delete handlers can invalidate it
+// NOTE: router is exported below; portfolioCache is attached to it so both are accessible.
+router.portfolioCache = portfolioCache;
+
+// ─── GET /api/portfolio-metrics ───────────────────────────────────────────────
+// Single endpoint that replaces the N+1 document fetches from PortfolioContext.
+// Returns all projects enriched with every metric field (counts + detail arrays).
+router.get('/portfolio-metrics', authenticate, async (req, res) => {
+  try {
+    // Serve from cache if still fresh
+    if (portfolioCache.isValid()) {
+      return res.json(portfolioCache.data);
+    }
+
+    const projects = await dbAdapter.getAllProjects({});
+
+    const enriched = projects.map(project => {
+      const projectName = project.name;
+      const filePath    = path.join(__dirname, '..', '..', 'project-documents', `${projectName}.xlsx`);
+
+      // File metadata
+      let lastModified = null;
+      let hasData      = false;
+      if (fs.existsSync(filePath)) {
+        try {
+          const stats = fs.statSync(filePath);
+          lastModified = stats.mtime;
+          hasData      = true;
+        } catch (_) { /* ignore stat errors */ }
+      }
+
+      if (!hasData) {
+        // No Excel file — return project with zeroed metrics
+        return {
+          ...project,
+          lastModified,
+          hasData: false,
+          ragStatus:                'Green',
+          plannedVsActualProgress:  0,
+          plannedProgress:          0,
+          actualProgress:           0,
+          totalMilestonesDue:       0,
+          completedMilestonesDue:   0,
+          overdueMilestones:        0,
+          overdueMilestoneDetails:  [],
+          upcomingMilestones:       0,
+          upcomingMilestoneDetails: [],
+          allMilestoneDetails:      [],
+          overdueTasks:             0,
+          openCriticalRisks:        0,
+          openCriticalRisksDetails: [],
+          openCriticalIssues:       0,
+          openCriticalIssuesDetails:[],
+          openEscalations:          0,
+          openEscalationsDetails:   [],
+          openDependencies:         0,
+          openDependenciesDetails:  [],
+          projectCompletion:        0,
+          totalTasks:               0,
+          completedTasks:           0,
+          projectPlan:              [],
+          projectCharter:           project.projectCharter || null,
+        };
+      }
+
+      // Parse Excel and calculate all metrics
+      const documents = loadProjectDocuments(projectName);
+      const metrics   = calculateProjectMetrics(documents);
+
+      return { ...project, lastModified, hasData: true, ...metrics };
+    });
+
+    const result = { projects: enriched };
+    portfolioCache.set(result);
+    res.json(result);
+  } catch (err) {
+    console.error('[portfolio-metrics] Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // Get metrics
 router.get('/', async (req, res) => {

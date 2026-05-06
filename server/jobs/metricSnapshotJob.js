@@ -1,133 +1,21 @@
 const cron = require('node-cron');
 const { MetricSnapshot } = require('../models');
 const dbAdapter = require('../dbAdapter');
-const fs = require('fs');
-const path = require('path');
-const xlsx = require('xlsx');
 
-// Helper to convert Excel serial dates to JS dates
-const convertExcelDateToJS = (excelDate) => {
-  if (!excelDate) return null;
-  if (typeof excelDate === 'number' && excelDate > 40000 && excelDate < 50000) {
-    return new Date(Date.UTC(1899, 11, 30) + excelDate * 86400 * 1000);
-  }
-  const parsed = new Date(excelDate);
-  return isNaN(parsed.getTime()) ? null : parsed;
-};
+// Use the shared utility — same logic as the portfolio-metrics endpoint
+const { loadProjectDocuments, calculateProjectMetrics: calcMetrics } = require('../utils/projectMetrics');
 
-// Calculate metrics for a single project from its Excel documents
+// Thin wrapper: snapshot job only needs the 6 count fields
 const calculateProjectMetrics = (documents) => {
-  const milestones = documents.milestoneTracker || [];
-  const tasks = documents.projectPlan || [];
-  const raidLog = documents.raidLog || [];
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const fourteenDaysFromNow = new Date(today.getTime() + 14 * 24 * 60 * 60 * 1000);
-
-  let overdueMilestones = 0;
-  let upcomingMilestones = 0;
-  let openCriticalRisks = 0;
-  let openCriticalIssues = 0;
-  let openEscalations = 0;
-  let openDependencies = 0;
-
-  // Count overdue and upcoming milestones
-  milestones.forEach(m => {
-    if (!m['Planned End Date']) return;
-    const endDate = convertExcelDateToJS(m['Planned End Date']);
-    if (!endDate) return;
-    endDate.setHours(0, 0, 0, 0);
-
-    const isCompleted = m.Status && (m.Status.toLowerCase() === 'completed' || m.Status.toLowerCase() === 'complete');
-
-    if (!isCompleted && endDate < today) {
-      overdueMilestones++;
-    } else if (!isCompleted && endDate >= today && endDate <= fourteenDaysFromNow) {
-      upcomingMilestones++;
-    }
-  });
-
-  // Count open critical risks (High or Critical severity)
-  openCriticalRisks = raidLog.filter(r => {
-    const isRisk = r.Type && r.Type.toLowerCase() === 'risk';
-    const isOpen = r.Status && r.Status.toLowerCase() !== 'closed' && r.Status.toLowerCase() !== 'resolved';
-    const isHighOrCritical = r.Severity && (r.Severity.toLowerCase() === 'high' || r.Severity.toLowerCase() === 'critical');
-    return isRisk && isOpen && isHighOrCritical;
-  }).length;
-
-  // Count open critical issues
-  openCriticalIssues = raidLog.filter(r => {
-    const isIssue = r.Type && r.Type.toLowerCase() === 'issue';
-    const isOpen = r.Status && r.Status.toLowerCase() !== 'closed' && r.Status.toLowerCase() !== 'resolved';
-    return isIssue && isOpen;
-  }).length;
-
-  // Count open escalations (Mitigation Strategy = "Escalate" and not closed)
-  openEscalations = raidLog.filter(r => {
-    const mitigation = r['Mitigation Strategy'] || r.MitigationStrategy || '';
-    const isEscalate = mitigation.toLowerCase() === 'escalate';
-    const closedDate = r['Closed Date'] || r.ClosedDate || r['Closed'] || r.closedDate;
-    const isNotClosed = !closedDate || String(closedDate).trim() === '' || String(closedDate).toLowerCase() === 'n/a';
-    return isEscalate && isNotClosed;
-  }).length;
-
-  // Count open dependencies
-  openDependencies = raidLog.filter(r => {
-    const isDependency = r.Type && r.Type.toLowerCase() === 'dependency';
-    const isOpen = r.Status && r.Status.toLowerCase() !== 'closed' && r.Status.toLowerCase() !== 'resolved';
-    return isDependency && isOpen;
-  }).length;
-
+  const full = calcMetrics(documents);
   return {
-    overdueMilestones,
-    upcomingMilestones,
-    openCriticalRisks,
-    openCriticalIssues,
-    openEscalations,
-    openDependencies
+    overdueMilestones:  full.overdueMilestones,
+    upcomingMilestones: full.upcomingMilestones,
+    openCriticalRisks:  full.openCriticalRisks,
+    openCriticalIssues: full.openCriticalIssues,
+    openEscalations:    full.openEscalations,
+    openDependencies:   full.openDependencies,
   };
-};
-
-// Load project documents from Excel files
-const loadProjectDocuments = async (projectName) => {
-  const documentsDir = path.join(__dirname, '..', '..', 'project-documents');
-  const filePath = path.join(documentsDir, `${projectName}.xlsx`);
-
-  if (!fs.existsSync(filePath)) {
-    return { milestoneTracker: [], projectPlan: [], raidLog: [] };
-  }
-
-  try {
-    const workbook = xlsx.readFile(filePath);
-
-    // Load Milestone Tracker
-    let milestoneTracker = [];
-    const milestoneSheet = workbook.Sheets['Milestone Tracker'] || workbook.Sheets['Milestones'];
-    if (milestoneSheet) {
-      milestoneTracker = xlsx.utils.sheet_to_json(milestoneSheet);
-    }
-
-    // Load Project Plan
-    let projectPlan = [];
-    const planSheet = workbook.Sheets['Project Plan'] || workbook.Sheets['Tasks'];
-    if (planSheet) {
-      projectPlan = xlsx.utils.sheet_to_json(planSheet);
-    }
-
-    // Load RAID Log
-    let raidLog = [];
-    const raidSheet = workbook.Sheets['RAID Log'] || workbook.Sheets['RAID'];
-    if (raidSheet) {
-      raidLog = xlsx.utils.sheet_to_json(raidSheet);
-    }
-
-    return { milestoneTracker, projectPlan, raidLog };
-  } catch (err) {
-    console.error(`Error loading documents for ${projectName}:`, err);
-    return { milestoneTracker: [], projectPlan: [], raidLog: [] };
-  }
 };
 
 // Helper to extract client from project (handles multiple client formats)
@@ -172,7 +60,7 @@ const calculateAggregateMetrics = async () => {
 
     // Process each active project
     for (const project of activeProjects) {
-      const documents = await loadProjectDocuments(project.name);
+      const documents = loadProjectDocuments(project.name);
       const metrics = calculateProjectMetrics(documents);
 
       // Only include projects that have metrics > 0 for at least one category

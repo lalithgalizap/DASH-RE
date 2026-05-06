@@ -67,181 +67,141 @@ router.get('/clients', authenticate, async (req, res) => {
 router.get('/metrics', authenticate, async (req, res) => {
   try {
     const { client_id } = req.query;
-    const user = await dbAdapter.getUserById(req.user.id);
+    const user       = await dbAdapter.getUserById(req.user.id);
     const allClients = await dbAdapter.getAllClients();
-    const allUsers = await dbAdapter.getAllUsers();
-    const allReports = await dbAdapter.getPerformanceReports({});
+    const allUsers   = await dbAdapter.getAllUsers();
 
-    const isAdmin = user.role_name === 'Admin' || user.role_name === 'Superuser';
-    const isCSP = user.role_name === 'CSP';
-    const isManager = user.role_name === 'Manager';
+    const isAdmin    = user.role_name === 'Admin' || user.role_name === 'Superuser';
+    const isCSP      = user.role_name === 'CSP';
+    const isManager  = user.role_name === 'Manager';
     const hasGlobalPerformance = user.permissions?.includes('can_view_global_performance');
     const canViewAll = isAdmin || isCSP || hasGlobalPerformance;
 
-    // Filter users based on role
+    // ── RBAC: determine which users are in scope ──────────────────────────────
     let relevantUsers = allUsers.filter(u => u.role_name === 'Manager' || u.role_name === 'Resource');
     if (isManager && !canViewAll) {
-      // Manager sees self + assigned resources
       relevantUsers = relevantUsers.filter(u => u.manager_id === user.id || u.id === user.id);
     }
 
     // Filter clients
-    const clientIds = new Set(relevantUsers.filter(u => u.client_id).map(u => u.client_id));
-    let clients = allClients.filter(c => clientIds.has(c.id));
+    const clientIdSet = new Set(relevantUsers.filter(u => u.client_id).map(u => u.client_id));
+    let clients = allClients.filter(c => clientIdSet.has(c.id));
 
-    // If client_id filter requested
     if (client_id) {
-      clients = clients.filter(c => c.id === client_id);
+      clients       = clients.filter(c => c.id === client_id);
       relevantUsers = relevantUsers.filter(u => u.client_id === client_id);
     }
 
-    // Track all relevant user IDs (both managers and resources)
-    const relevantUserIds = new Set(relevantUsers.map(u => u.id));
-    // Track resource IDs specifically for report filtering
-    const relevantResourceIds = new Set(relevantUsers.filter(u => u.role_name === 'Resource').map(u => u.id));
-    // Track manager IDs
-    const relevantManagerIds = new Set(relevantUsers.filter(u => u.role_name === 'Manager').map(u => u.id));
+    // ── DB aggregation — replaces getPerformanceReports({}) full scan ─────────
+    const relevantUserIds = relevantUsers.map(u => u.id);
+    const { latestByUser, quarterCounts, totalReports, lastUpdatedAt } =
+      await dbAdapter.getPerformanceMetricsAggregated(relevantUserIds);
 
-    // Get reports for resources AND managers (if managers have reports)
-    let reports = allReports.filter(r => relevantUserIds.has(r.resource_id?.toString?.() || r.resource_id));
-
-    // Latest report per user (by updatedAt desc)
-    const latestByUser = {};
-    reports.forEach(r => {
-      const rid = r.resource_id?.toString?.() || r.resource_id;
-      if (!latestByUser[rid] || new Date(r.updatedAt) > new Date(latestByUser[rid].updatedAt)) {
-        latestByUser[rid] = r;
-      }
-    });
-    const latestReports = Object.values(latestByUser);
-
-    // Status distribution (latest report per user)
+    // ── Status distribution (latest report per user) ──────────────────────────
     const statusCounts = { red: 0, amber: 0, green: 0, unknown: 0 };
-    latestReports.forEach(r => {
-      const st = r.overall_status;
+    const scoreWeights = { green: 100, amber: 66.66, red: 33.33, unknown: 0 };
+    let scoreSum = 0;
+
+    latestByUser.forEach(r => {
+      const st = r.overall_status || 'unknown';
       if (statusCounts[st] !== undefined) statusCounts[st]++;
       else statusCounts.unknown++;
+      scoreSum += scoreWeights[st] || 0;
     });
 
-    // Weighted overall score (Green=100, Amber=66.66, Red=33.33, N/A=0)
-    const scoreWeights = { green: 100, amber: 66.66, red: 33.33, unknown: 0 };
-    const overallScore = latestReports.length > 0
-      ? Math.round(latestReports.reduce((sum, r) => sum + (scoreWeights[r.overall_status] || 0), 0) / latestReports.length)
+    const totalWithLatestReport = latestByUser.size;
+    const overallScore = totalWithLatestReport > 0
+      ? Math.round(scoreSum / totalWithLatestReport)
       : 0;
 
-    // Users without any report
-    const userIdsWithReport = new Set(Object.keys(latestByUser));
+    // ── Users without any report ──────────────────────────────────────────────
     const resourcesWithoutReport = relevantUsers
-      .filter(u => u.role_name === 'Resource' && !userIdsWithReport.has(u.id))
+      .filter(u => u.role_name === 'Resource' && !latestByUser.has(u.id))
       .map(u => ({
-        id: u.id,
-        username: u.username,
+        id:        u.id,
+        username:  u.username,
         role_name: u.role_name,
         client_id: u.client_id,
         client_name: clients.find(c => c.id === u.client_id)?.name || ''
       }));
 
     const managersWithoutReport = relevantUsers
-      .filter(u => u.role_name === 'Manager' && !userIdsWithReport.has(u.id))
+      .filter(u => u.role_name === 'Manager' && !latestByUser.has(u.id))
       .map(u => ({
-        id: u.id,
-        username: u.username,
+        id:        u.id,
+        username:  u.username,
         role_name: u.role_name,
         client_id: u.client_id,
         client_name: clients.find(c => c.id === u.client_id)?.name || ''
       }));
 
-    // Count resources per client with detailed metrics
+    // ── Per-client breakdown ──────────────────────────────────────────────────
     const resourcesPerClient = clients.map(c => {
-      const clientUsers = relevantUsers.filter(u => u.client_id === c.id);
+      const clientUsers     = relevantUsers.filter(u => u.client_id === c.id);
       const clientResources = clientUsers.filter(u => u.role_name === 'Resource');
-      const clientManagers = clientUsers.filter(u => u.role_name === 'Manager');
-      const clientUserIds = new Set(clientUsers.map(u => u.id));
+      const clientManagers  = clientUsers.filter(u => u.role_name === 'Manager');
 
-      // Latest reports for this client
-      const clientLatestReports = latestReports.filter(r => clientUserIds.has(r.resource_id?.toString?.() || r.resource_id));
-
-      // Status distribution for this client
       const clientStatusCounts = { red: 0, amber: 0, green: 0, unknown: 0 };
-      clientLatestReports.forEach(r => {
-        const st = r.overall_status;
+      let clientScoreSum = 0;
+      let clientLatestDate = new Date(0);
+
+      clientUsers.forEach(u => {
+        const r = latestByUser.get(u.id);
+        if (!r) return;
+        const st = r.overall_status || 'unknown';
         if (clientStatusCounts[st] !== undefined) clientStatusCounts[st]++;
         else clientStatusCounts.unknown++;
+        clientScoreSum += scoreWeights[st] || 0;
+        const d = new Date(r.updatedAt);
+        if (d > clientLatestDate) clientLatestDate = d;
       });
 
-      // Weighted overall score for this client
-      const clientScoreWeights = { green: 100, amber: 66.66, red: 33.33, unknown: 0 };
-      const clientOverallScore = clientLatestReports.length > 0
-        ? Math.round(clientLatestReports.reduce((sum, r) => sum + (clientScoreWeights[r.overall_status] || 0), 0) / clientLatestReports.length)
+      const clientReportCount = clientUsers.filter(u => latestByUser.has(u.id)).length;
+      const clientOverallScore = clientReportCount > 0
+        ? Math.round(clientScoreSum / clientReportCount)
         : 0;
 
-      // Users without updates for this client
-      const clientResourcesWithoutUpdates = resourcesWithoutReport.filter(r => r.client_id === c.id).length;
-      const clientManagersWithoutUpdates = managersWithoutReport.filter(r => r.client_id === c.id).length;
-
-      // Last updated for this client
-      const clientLastUpdatedAt = clientLatestReports.length > 0
-        ? clientLatestReports.reduce((latest, r) => {
-            const d = new Date(r.updatedAt);
-            return d > latest ? d : latest;
-          }, new Date(0)).toISOString()
-        : null;
-
       return {
-        name: c.name,
-        count: clientResources.length,
-        managerCount: clientManagers.length,
-        totalCount: clientResources.length + clientManagers.length,
-        id: c.id,
-        resourcesWithoutUpdates: clientResourcesWithoutUpdates,
-        managersWithoutUpdates: clientManagersWithoutUpdates,
-        overallScore: clientOverallScore,
-        lastUpdatedAt: clientLastUpdatedAt,
+        name:                     c.name,
+        count:                    clientResources.length,
+        managerCount:             clientManagers.length,
+        totalCount:               clientResources.length + clientManagers.length,
+        id:                       c.id,
+        resourcesWithoutUpdates:  resourcesWithoutReport.filter(r => r.client_id === c.id).length,
+        managersWithoutUpdates:   managersWithoutReport.filter(r => r.client_id === c.id).length,
+        overallScore:             clientOverallScore,
+        lastUpdatedAt:            clientReportCount > 0 ? clientLatestDate.toISOString() : null,
         statusDistribution: {
-          red: clientStatusCounts.red,
-          amber: clientStatusCounts.amber,
-          green: clientStatusCounts.green,
+          red:     clientStatusCounts.red,
+          amber:   clientStatusCounts.amber,
+          green:   clientStatusCounts.green,
           unknown: clientStatusCounts.unknown
         }
       };
     }).filter(c => c.count > 0 || c.managerCount > 0);
 
-    // Quarter distribution
-    const quarterCounts = {};
-    reports.forEach(r => {
-      const key = `${r.quarter} ${r.year}`;
-      quarterCounts[key] = (quarterCounts[key] || 0) + 1;
-    });
-
-    // Last updated timestamp from any report
-    const lastUpdatedAt = reports.length > 0
-      ? reports.reduce((latest, r) => {
-          const d = new Date(r.updatedAt);
-          return d > latest ? d : latest;
-        }, new Date(0)).toISOString()
-      : null;
-
+    // ── Build response (identical shape to before) ────────────────────────────
     res.json({
-      totalClients: clients.length,
-      totalResources: relevantUsers.filter(u => u.role_name === 'Resource').length,
-      totalManagers: relevantUsers.filter(u => u.role_name === 'Manager').length,
-      totalReports: reports.length,
-      totalWithLatestReport: latestReports.length,
+      totalClients:         clients.length,
+      totalResources:       relevantUsers.filter(u => u.role_name === 'Resource').length,
+      totalManagers:        relevantUsers.filter(u => u.role_name === 'Manager').length,
+      totalReports,
+      totalWithLatestReport,
       resourcesWithoutReport,
       managersWithoutReport,
       totalWithoutReport: {
         resources: resourcesWithoutReport.length,
-        managers: managersWithoutReport.length,
-        total: resourcesWithoutReport.length + managersWithoutReport.length
+        managers:  managersWithoutReport.length,
+        total:     resourcesWithoutReport.length + managersWithoutReport.length
       },
       overallScore,
       lastUpdatedAt,
       resourcesPerClient,
       statusDistribution: [
-        { name: 'Red', value: statusCounts.red, color: '#ef4444' },
-        { name: 'Amber', value: statusCounts.amber, color: '#f59e0b' },
-        { name: 'Green', value: statusCounts.green, color: '#22c55e' },
-        { name: 'N/A', value: statusCounts.unknown, color: '#94a3b8' }
+        { name: 'Red',   value: statusCounts.red,     color: '#ef4444' },
+        { name: 'Amber', value: statusCounts.amber,   color: '#f59e0b' },
+        { name: 'Green', value: statusCounts.green,   color: '#22c55e' },
+        { name: 'N/A',   value: statusCounts.unknown, color: '#94a3b8' }
       ],
       quarterDistribution: Object.entries(quarterCounts).map(([name, value]) => ({ name, value }))
     });

@@ -386,6 +386,96 @@ class DatabaseAdapter {
     return { changes: 1 };
   }
 
+  /**
+   * Aggregated performance metrics — replaces the full collection scan in
+   * GET /api/performance/metrics.
+   *
+   * @param {string[]} relevantUserIds  - string IDs of users in scope (post-RBAC)
+   * @returns {{
+   *   latestByUser:    Map<string, { overall_status, updatedAt, client_id }>,
+   *   quarterCounts:   Record<string, number>,
+   *   totalReports:    number,
+   *   lastUpdatedAt:   string|null
+   * }}
+   */
+  async getPerformanceMetricsAggregated(relevantUserIds) {
+    if (!relevantUserIds || relevantUserIds.length === 0) {
+      return { latestByUser: new Map(), quarterCounts: {}, totalReports: 0, lastUpdatedAt: null };
+    }
+
+    const mongoose = require('mongoose');
+    const objectIds = relevantUserIds.map(id => {
+      try { return new mongoose.Types.ObjectId(id); } catch { return null; }
+    }).filter(Boolean);
+
+    if (objectIds.length === 0) {
+      return { latestByUser: new Map(), quarterCounts: {}, totalReports: 0, lastUpdatedAt: null };
+    }
+
+    // ── Pipeline 1: latest report per user + quarter distribution ────────────
+    // One aggregation pass over the filtered subset:
+    //   $match  → only reports for relevant users
+    //   $sort   → newest first (uses { resource_id, updatedAt } index)
+    //   $group  → keep $first (= latest) per resource_id
+    const [latestResults, quarterResults, countResult] = await Promise.all([
+
+      // Latest report per user
+      models.PerformanceReport.aggregate([
+        { $match: { resource_id: { $in: objectIds } } },
+        { $sort:  { resource_id: 1, updatedAt: -1 } },
+        { $group: {
+            _id:            '$resource_id',
+            overall_status: { $first: '$overall_status' },
+            updatedAt:      { $first: '$updatedAt' },
+            client_id:      { $first: '$client_id' }
+        }}
+      ]),
+
+      // Quarter distribution (all reports, not just latest)
+      models.PerformanceReport.aggregate([
+        { $match: { resource_id: { $in: objectIds } } },
+        { $group: {
+            _id:   { quarter: '$quarter', year: '$year' },
+            count: { $sum: 1 }
+        }}
+      ]),
+
+      // Total report count + last updatedAt
+      models.PerformanceReport.aggregate([
+        { $match: { resource_id: { $in: objectIds } } },
+        { $group: {
+            _id:           null,
+            totalReports:  { $sum: 1 },
+            lastUpdatedAt: { $max: '$updatedAt' }
+        }}
+      ])
+    ]);
+
+    // Build latestByUser map  key = resource_id string
+    const latestByUser = new Map();
+    latestResults.forEach(r => {
+      latestByUser.set(r._id.toString(), {
+        overall_status: r.overall_status,
+        updatedAt:      r.updatedAt,
+        client_id:      r.client_id?.toString()
+      });
+    });
+
+    // Build quarterCounts  key = "Q1 2024"
+    const quarterCounts = {};
+    quarterResults.forEach(r => {
+      const key = `${r._id.quarter} ${r._id.year}`;
+      quarterCounts[key] = r.count;
+    });
+
+    const totalReports  = countResult[0]?.totalReports  || 0;
+    const lastUpdatedAt = countResult[0]?.lastUpdatedAt
+      ? new Date(countResult[0].lastUpdatedAt).toISOString()
+      : null;
+
+    return { latestByUser, quarterCounts, totalReports, lastUpdatedAt };
+  }
+
   // Users by client (for performance page)
   async getUsersByClient(clientId, roleName = null) {
     const query = { client_id: clientId };

@@ -8,6 +8,9 @@ const { authenticate, requirePermission } = require('../auth');
 
 const router = express.Router();
 
+// Lazy-load the portfolio cache to avoid circular-require issues
+const getPortfolioCache = () => require('./metrics').portfolioCache;
+
 // Helper: extract project manager (owner) from uploaded Excel charter
 function getOwnerFromExcel(projectName) {
   try {
@@ -123,6 +126,7 @@ router.post('/', authenticate, requirePermission('projects', 'add_delete'), asyn
   try {
     const { name, priority, stage, summary, status, clients, links, owner, vertical, region, sponsor, anchor_customer, spoc, actionItem, riskSummary, mitigationPlan, sowStatus } = req.body;
     const result = await dbAdapter.createProject({ name, priority, stage, summary, status, clients, links, owner, vertical, region, sponsor, anchor_customer, spoc, actionItem, riskSummary, mitigationPlan, sowStatus });
+    getPortfolioCache().clear();
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -143,6 +147,7 @@ router.put('/:id', authenticate, requirePermission('projects', 'edit'), async (r
     }
     
     const result = await dbAdapter.updateProject(req.params.id, updateData);
+    getPortfolioCache().clear();
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -175,6 +180,7 @@ router.patch('/:id/:field', authenticate, requirePermission('projects', 'edit'),
     // Remove dashboardUpdatedAt to prevent updating Portfolio timestamp from PATCH updates
     delete project.dashboardUpdatedAt;
     const result = await dbAdapter.updateProject(id, project);
+    getPortfolioCache().clear();
     res.json({ success: true, changes: result.changes, field, value });
   } catch (err) {
     console.error(`[PATCH] Error:`, err.message);
@@ -200,6 +206,8 @@ router.delete('/:id', authenticate, requirePermission('projects', 'add_delete'),
     }
     
     const result = await dbAdapter.deleteProject(req.params.id);
+    // Invalidate portfolio cache — project is gone
+    getPortfolioCache().clear();
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -239,6 +247,8 @@ router.post('/upload-document', authenticate, requirePermission('projects', 'add
       filename: req.file.originalname,
       projectName: projectName
     });
+    // Invalidate portfolio cache so next request re-reads the new file
+    getPortfolioCache().clear();
   } catch (err) {
     console.error('[UPLOAD] Error:', err);
     if (req.file) fs.unlinkSync(req.file.path);
