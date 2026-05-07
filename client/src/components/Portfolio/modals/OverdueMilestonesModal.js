@@ -197,12 +197,29 @@ const OverdueMilestonesModal = ({ isOpen, onClose, projects, selectedClient }) =
           borderBottom: '1px solid #e5e7eb' 
         }}>
           <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600' }}>Projects with Overdue Milestones</h2>
-          <button onClick={onClose} style={{ 
-            background: 'none', 
-            border: 'none', 
-            fontSize: '24px', 
-            cursor: 'pointer' 
-          }}>×</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              padding: '6px 14px',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              background: '#f8fafc',
+              minWidth: '80px'
+            }}>
+              <span style={{ fontSize: '18px', fontWeight: 700, color: '#111827', lineHeight: 1 }}>
+                {activeProjects.reduce((sum, p) => sum + (p.allMilestoneDetails?.length || 0), 0)}
+              </span>
+              <span style={{ fontSize: '10px', color: '#6b7280', marginTop: '3px', whiteSpace: 'nowrap' }}>
+                Total Milestones
+              </span>
+            </div>
+            <button onClick={onClose} style={{ 
+              background: 'none', 
+              border: 'none', 
+              fontSize: '24px', 
+              cursor: 'pointer' 
+            }}>×</button>
+          </div>
         </div>
         <div className="modal-body" style={{ padding: '20px' }}>
           {/* View Toggle + Search */}

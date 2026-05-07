@@ -29,9 +29,34 @@ const userSchema = new mongoose.Schema({
     ref: 'Client',
     default: null
   },
+  product_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Product',
+    default: null
+  },
   is_active: {
     type: Boolean,
     default: true
+  },
+  in_org: {
+    type: Boolean,
+    default: true   // true = In Org, false = Out Of Org
+  },
+  current_quarters: {
+    type: [String],
+    default: []
+  },
+  current_year: {
+    type: Number,
+    default: null
+  },
+  quarter_activity: {
+    type: [{
+      year:    { type: Number, required: true },
+      quarter: { type: String, enum: ['Q1','Q2','Q3','Q4'], required: true },
+      status:  { type: String, enum: ['active','inactive'], default: 'active' }
+    }],
+    default: []
   },
   created_at: {
     type: Date,

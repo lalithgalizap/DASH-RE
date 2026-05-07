@@ -50,12 +50,23 @@ function Performance() {
   // { category: 'delivery', option: 'yes', label: 'Delivery — Yes', color: '#16a34a', resources: [...] }
 
   // All resources state and filters
+  // ── Derive current quarter from today's date ──────────────────────────────
+  const getCurrentQuarter = () => {
+    const month = new Date().getMonth(); // 0-11
+    if (month < 3)  return 'Q1';
+    if (month < 6)  return 'Q2';
+    if (month < 9)  return 'Q3';
+    return 'Q4';
+  };
+  const CURRENT_QUARTER = getCurrentQuarter();
+  const CURRENT_YEAR_STR = String(new Date().getFullYear());
+
   const [allResources, setAllResources] = useState([]);
   const [resourceFilters, setResourceFilters] = useState({
     client: [],
     status: [],
-    quarter: [],
-    year: [],
+    quarter: [CURRENT_QUARTER],   // default to current quarter
+    year:    [CURRENT_YEAR_STR],  // default to current year
     search: ''
   });
 
@@ -71,12 +82,18 @@ function Performance() {
     fetchClients();
     fetchProducts();
     fetchMetrics();
-    fetchAllResources();
+    // NOTE: fetchAllResources is intentionally NOT called here.
+    // The useEffect below watches resourceFilters.quarter/year and fires on
+    // mount with the default current-quarter values — calling it here too
+    // would race and sometimes overwrite the filtered result with unfiltered data.
     
     // Refresh data when window regains focus (user returns from edit page)
     const handleFocus = () => {
       fetchMetrics();
-      fetchAllResources();
+      fetchAllResources({
+        quarter: resourceFilters.quarter,
+        year: resourceFilters.year
+      });
     };
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
@@ -448,15 +465,18 @@ function Performance() {
   };
 
   const hasActiveFilters = () => {
-    return resourceFilters.search || 
-           resourceFilters.client.length > 0 || 
-           resourceFilters.quarter.length > 0 || 
-           resourceFilters.year.length > 0 || 
-           resourceFilters.status.length > 0;
+    // Not "active" if everything is at the default: current quarter, current year, no other filters
+    const isDefaultQuarter = resourceFilters.quarter.length === 1 && resourceFilters.quarter[0] === CURRENT_QUARTER;
+    const isDefaultYear    = resourceFilters.year.length === 1    && resourceFilters.year[0]    === CURRENT_YEAR_STR;
+    const isDefault = isDefaultQuarter && isDefaultYear &&
+      !resourceFilters.search &&
+      resourceFilters.client.length === 0 &&
+      resourceFilters.status.length === 0;
+    return !isDefault;
   };
 
   const clearAllFilters = () => {
-    setResourceFilters({ client: [], status: [], quarter: [], year: [], search: '' });
+    setResourceFilters({ client: [], status: [], quarter: [CURRENT_QUARTER], year: [CURRENT_YEAR_STR], search: '' });
   };
 
   if (loading && view === 'clients') {
@@ -508,6 +528,7 @@ function Performance() {
           {/* Dashboard Metrics */}
           {metrics && (() => {
             // Compute filtered resources for metrics cards
+            // Exclude resources marked inactive for the selected quarter
             const filteredForMetrics = allResources.filter(r => {
               const matchesSearch = !resourceFilters.search || r.username?.toLowerCase().includes(resourceFilters.search.toLowerCase());
               const matchesClient = resourceFilters.client.length === 0 || resourceFilters.client.includes(r.client_id);
@@ -515,7 +536,9 @@ function Performance() {
                 resourceFilters.status.some(status =>
                   status === 'none' ? !r.latest_report : r.latest_report?.recommendation === status
                 );
-              return matchesSearch && matchesClient && matchesStatus;
+              // Exclude inactive resources from metrics
+              const isInactive = r.quarter_activity_status === 'inactive';
+              return matchesSearch && matchesClient && matchesStatus && !isInactive;
             });
 
             const totalFiltered = filteredForMetrics.length;
@@ -732,18 +755,17 @@ function Performance() {
                     </div>
                   </div>
 
-                  {/* Multi-select Quarter Filter */}
+                  {/* Quarter Filter */}
                   <div className="multi-select-wrapper">
                     <select
-                      multiple
-                      value={resourceFilters.quarter}
+                      value={resourceFilters.quarter[0] || ''}
                       onChange={e => {
-                        const selected = Array.from(e.target.selectedOptions, option => option.value);
-                        setResourceFilters({ ...resourceFilters, quarter: selected });
+                        const val = e.target.value;
+                        setResourceFilters({ ...resourceFilters, quarter: val ? [val] : [] });
                       }}
-                      className="filter-select multi-select"
-                      size="1"
+                      className="filter-select"
                     >
+                      <option value="">All Quarters</option>
                       <option value="Q1">Q1</option>
                       <option value="Q2">Q2</option>
                       <option value="Q3">Q3</option>
@@ -751,23 +773,23 @@ function Performance() {
                     </select>
                     <div className="multi-select-label">
                       {resourceFilters.quarter.length === 0 ? 'All Quarters' : 
-                       resourceFilters.quarter.length === 1 ? resourceFilters.quarter[0] :
-                       `${resourceFilters.quarter.length} Quarters`}
+                       resourceFilters.quarter[0] === CURRENT_QUARTER
+                         ? `${CURRENT_QUARTER} (Current)`
+                         : resourceFilters.quarter[0]}
                     </div>
                   </div>
 
-                  {/* Multi-select Year Filter */}
+                  {/* Year Filter */}
                   <div className="multi-select-wrapper">
                     <select
-                      multiple
-                      value={resourceFilters.year}
+                      value={resourceFilters.year[0] || ''}
                       onChange={e => {
-                        const selected = Array.from(e.target.selectedOptions, option => option.value);
-                        setResourceFilters({ ...resourceFilters, year: selected });
+                        const val = e.target.value;
+                        setResourceFilters({ ...resourceFilters, year: val ? [val] : [] });
                       }}
-                      className="filter-select multi-select"
-                      size="1"
+                      className="filter-select"
                     >
+                      <option value="">All Years</option>
                       <option value="2024">2024</option>
                       <option value="2025">2025</option>
                       <option value="2026">2026</option>
@@ -775,8 +797,9 @@ function Performance() {
                     </select>
                     <div className="multi-select-label">
                       {resourceFilters.year.length === 0 ? 'All Years' : 
-                       resourceFilters.year.length === 1 ? resourceFilters.year[0] :
-                       `${resourceFilters.year.length} Years`}
+                       resourceFilters.year[0] === CURRENT_YEAR_STR
+                         ? `${CURRENT_YEAR_STR} (Current)`
+                         : resourceFilters.year[0]}
                     </div>
                   </div>
 
@@ -838,6 +861,8 @@ function Performance() {
                     <tbody>
                       {allResources
                         .filter(r => {
+                          const isInactive = r.quarter_activity_status === 'inactive';
+                          if (isInactive) return false; // never show inactive resources
                           const matchesSearch = !resourceFilters.search || r.username?.toLowerCase().includes(resourceFilters.search.toLowerCase());
                           const matchesClient = resourceFilters.client.length === 0 || resourceFilters.client.includes(r.client_id);
                           const matchesStatus = resourceFilters.status.length === 0 || 
@@ -847,6 +872,7 @@ function Performance() {
                           return matchesSearch && matchesClient && matchesStatus;
                         })
                         .map(resource => {
+                          const isInactive = resource.quarter_activity_status === 'inactive';
                           // Use client from latest report snapshot, fallback to user's assigned client
                           const clientName = resource.latest_report?.client_name_snapshot 
                             || resource.latest_report?.client_name 
@@ -856,23 +882,41 @@ function Performance() {
                             ? `${new Date(resource.latest_report.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · ${resource.latest_report.quarter ? (resource.latest_report.quarter.toString().startsWith('Q') ? resource.latest_report.quarter : `Q${resource.latest_report.quarter}`) : '—'} ${resource.latest_report.year || '—'}`
                             : '—';
                           return (
-                            <tr key={resource.id} className="perf-table-row" onClick={() => handleResourceClick(resource)}>
+                            <tr
+                              key={resource.id}
+                              className="perf-table-row"
+                              onClick={() => !isInactive && handleResourceClick(resource)}
+                              style={isInactive ? { opacity: 0.5, cursor: 'default', background: '#f8fafc' } : {}}
+                            >
                               <td>
                                 <div className="resource-cell">
-                                  <div className="resource-avatar" style={{ background: getAvatarColor(resource.username) }}>
+                                  <div className="resource-avatar" style={{ background: isInactive ? '#9ca3af' : getAvatarColor(resource.username) }}>
                                     {getInitials(resource.username)}
                                   </div>
                                   <span className="resource-name">{resource.username}</span>
                                 </div>
                               </td>
-                              <td>{clientName}</td>
+                              <td>
+                                {isInactive || !resource.latest_report ? '—' : clientName}
+                              </td>
                               <td>
                                 <span className="role-team-text">
-                                  {resource.latest_report?.role_team || resource.role_name || '—'}
+                                  {isInactive || !resource.latest_report
+                                    ? '—'
+                                    : resource.latest_report?.role_team || resource.role_name || '—'}
                                 </span>
                               </td>
                               <td>
-                                {resource.latest_report ? (
+                                {isInactive ? (
+                                  <span style={{
+                                    display: 'inline-block', padding: '3px 10px',
+                                    borderRadius: '20px', fontSize: '12px', fontWeight: 600,
+                                    background: '#fee2e2', color: '#dc2626',
+                                    border: '1px solid #fca5a5'
+                                  }}>
+                                    Inactive this quarter
+                                  </span>
+                                ) : resource.latest_report ? (
                                   <div className="scorecard-inline">
                                     <div className={`scorecard-metric delivery-${resource.latest_report.delivery || 'none'}`}>
                                       <span className="metric-label">Delivery</span>
@@ -892,12 +936,24 @@ function Performance() {
                                     </div>
                                   </div>
                                 ) : (
-                                  <span className="na-text">—</span>
+                                  /* Active but no report for the selected quarter */
+                                  <span style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: '5px',
+                                    padding: '3px 10px', borderRadius: '20px',
+                                    fontSize: '12px', fontWeight: 600,
+                                    background: '#fef3c7', color: '#92400e',
+                                    border: '1px solid #fcd34d'
+                                  }}>
+                                    No report
+                                    {canManagePerformance() && (
+                                      <span style={{ fontWeight: 400, color: '#b45309' }}>— Please upload</span>
+                                    )}
+                                  </span>
                                 )}
                               </td>
                               <td>
                                 <div className="rating-display">
-                                  {resource.latest_report?.rating ? (
+                                  {!isInactive && resource.latest_report?.rating ? (
                                     <>
                                       <span className="rating-value">{resource.latest_report.rating}</span>
                                       <span className="rating-stars">{'★'.repeat(Math.round(resource.latest_report.rating))}{'☆'.repeat(5 - Math.round(resource.latest_report.rating))}</span>
@@ -907,19 +963,21 @@ function Performance() {
                                   )}
                                 </div>
                               </td>
-                              <td>{lastReportDate}</td>
+                              <td>{isInactive ? '—' : lastReportDate}</td>
                               <td>
                                 <div className="action-buttons">
-                                  <button
-                                    className="action-btn view-btn"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleResourceClick(resource);
-                                    }}
-                                    title="View Details"
-                                  >
-                                    <Eye size={22} />
-                                  </button>
+                                  {!isInactive && resource.latest_report && (
+                                    <button
+                                      className="action-btn view-btn"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleResourceClick(resource);
+                                      }}
+                                      title="View Details"
+                                    >
+                                      <Eye size={22} />
+                                    </button>
+                                  )}
                                 </div>
                               </td>
                             </tr>

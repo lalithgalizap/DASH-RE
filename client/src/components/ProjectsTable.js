@@ -192,7 +192,7 @@ function ProjectsTable({ projects, allProjects, filters, onFilterChange, onEdit,
               <tr>
                 <th>PROJECT</th>
                 <th>CLIENT</th>
-                <th>OWNER</th>
+                <th>OWNER/PM</th>
                 <th>LAST UPDATED</th>
                 <th>SUMMARY</th>
                 <th>STATUS</th>

@@ -33,7 +33,7 @@ function PortfolioMetrics({ metrics, onMetricClick }) {
     {
       key: 'criticalRisks',
       value: metrics.openCriticalRisksTotal || 0,
-      label: 'Open Critical Risks',
+      label: 'Open Risks',
       sublabel: 'Critical / High only',
       icon: AlertTriangle,
       iconBg: '#fee2e2',
@@ -53,7 +53,7 @@ function PortfolioMetrics({ metrics, onMetricClick }) {
     {
       key: 'criticalIssues',
       value: metrics.openCriticalIssuesTotal || 0,
-      label: 'Open Critical Issues',
+      label: 'Open Issues',
       sublabel: 'All open issues',
       icon: AlertCircle,
       iconBg: '#fee2e2',

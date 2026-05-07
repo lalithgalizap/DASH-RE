@@ -260,6 +260,9 @@ router.get('/resources', authenticate, async (req, res) => {
       // Resource user only sees themselves
       resources = resources.filter(r => r.id === user.id);
     }
+
+    // Only show managers/resources who have a product assigned
+    resources = resources.filter(r => r.product_id);
     
     // Helper function to calculate rating out of 5 based on report metrics
     const calculateRating = (report) => {
@@ -336,8 +339,22 @@ router.get('/resources', authenticate, async (req, res) => {
 
       // Take the first one (most recently updated) after filtering
       const latestReport = reports[0] || null;
+
+      // ── Quarter activity status ──────────────────────────────────────────
+      // When a quarter+year filter is active, look up whether this resource
+      // was marked active/inactive for that specific quarter/year combination.
+      let quarterActivityStatus = null; // null = not set
+      if (quarters.length === 1 && years.length === 1) {
+        const filterYear = parseInt(years[0]);
+        const qa = (resource.quarter_activity || []).find(
+          a => a.quarter === quarters[0] && Number(a.year) === filterYear
+        );
+        quarterActivityStatus = qa?.status || null; // 'active' | 'inactive' | null
+      }
+
       return {
         ...resource,
+        quarter_activity_status: quarterActivityStatus,
         latest_report: latestReport ? {
           id: latestReport.id,
           createdAt: latestReport.createdAt,
@@ -360,13 +377,11 @@ router.get('/resources', authenticate, async (req, res) => {
         } : null
       };
     });
-    
-    // Filter out resources that don't have a matching report when quarter/year filters are applied
-    const filteredResources = (quarters.length > 0 || years.length > 0) 
-      ? resourcesWithReports.filter(r => r.latest_report !== null)
-      : resourcesWithReports;
-    
-    res.json(filteredResources);
+
+    // ── Always return ALL resources when a quarter/year filter is active ──
+    // (previously we excluded resources without matching reports — now we keep
+    //  them so the UI can show "Inactive" or "No Report" for that quarter)
+    res.json(resourcesWithReports);
   } catch (err) {
     console.error('Error fetching resources:', err);
     res.status(500).json({ error: err.message });

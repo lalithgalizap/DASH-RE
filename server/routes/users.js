@@ -18,7 +18,7 @@ router.get('/', authenticate, requireAdmin, async (req, res) => {
 
 // Create user
 router.post('/', authenticate, requireAdmin, async (req, res) => {
-  const { username, email, password, role_id, manager_id, client_id, is_active, send_email } = req.body;
+  const { username, email, password, role_id, manager_id, client_id, product_id, is_active, send_email } = req.body;
   
   if (!username || !email || !password) {
     return res.status(400).json({ error: 'Username, email, and password are required' });
@@ -29,6 +29,7 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
     const createData = { username, email, password: hashedPassword, role_id: role_id || null };
     if (manager_id) createData.manager_id = manager_id;
     if (client_id) createData.client_id = client_id;
+    if (product_id) createData.product_id = product_id;
     if (is_active !== undefined) createData.is_active = is_active;
     const result = await dbAdapter.createUser(createData);
     
@@ -51,7 +52,7 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
 // Update user
 router.put('/:id', authenticate, requireAdmin, async (req, res) => {
   try {
-    const { username, email, password, role_id, manager_id, client_id, is_active } = req.body;
+    const { username, email, password, role_id, manager_id, client_id, product_id, is_active } = req.body;
     
     const updateData = {};
     if (username) updateData.username = username;
@@ -68,8 +69,23 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
     if (client_id !== undefined) {
       updateData.client_id = client_id || null;
     }
+    if (product_id !== undefined) {
+      updateData.product_id = product_id || null;
+    }
     if (is_active !== undefined) {
       updateData.is_active = is_active;
+    }
+    if (req.body.in_org !== undefined) {
+      updateData.in_org = req.body.in_org;
+    }
+    if (req.body.current_quarters !== undefined) {
+      updateData.current_quarters = req.body.current_quarters || [];
+    }
+    if (req.body.current_year !== undefined) {
+      updateData.current_year = req.body.current_year || null;
+    }
+    if (req.body.quarter_activity !== undefined) {
+      updateData.quarter_activity = req.body.quarter_activity;
     }
     
     if (Object.keys(updateData).length === 0) {

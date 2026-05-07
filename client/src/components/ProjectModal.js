@@ -17,6 +17,7 @@ function ProjectModal({ project, onClose, onSave, isAdmin, canManageClients, can
   const [allClients, setAllClients] = useState([]);
   const [showClientDropdown, setShowClientDropdown] = useState(false);
   const [clientSearch, setClientSearch] = useState('');
+  const [clientError, setClientError] = useState(false);
 
   useEffect(() => {
     fetchAllClients();
@@ -73,6 +74,13 @@ function ProjectModal({ project, onClose, onSave, isAdmin, canManageClients, can
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    if (!formData.clients || formData.clients.length === 0) {
+      setClientError(true);
+      return;
+    }
+
+    setClientError(false);
     onSave({
       ...formData,
       clients: formData.clients.join(', ')
@@ -137,19 +145,24 @@ function ProjectModal({ project, onClose, onSave, isAdmin, canManageClients, can
           </div>
 
           <div className="form-group">
-            <label>Clients</label>
+            <label>Clients *</label>
             {canAddClients ? (
               <div className="client-select-container">
-                <div className="selected-clients">
+                <div className="selected-clients" style={{ borderColor: clientError ? '#ef4444' : undefined }}>
                   {formData.clients.map(client => (
                     <span key={client} className="client-tag">
                       {client}
-                      <button type="button" onClick={() => removeClient(client)} className="remove-client">
+                      <button type="button" onClick={() => { removeClient(client); setClientError(false); }} className="remove-client">
                         <XIcon size={14} />
                       </button>
                     </span>
                   ))}
                 </div>
+                {clientError && (
+                  <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
+                    At least one client is required.
+                  </p>
+                )}
                 <div className="client-dropdown-wrapper">
                   <div
                     className="client-input-wrapper"
@@ -177,6 +190,7 @@ function ProjectModal({ project, onClose, onSave, isAdmin, canManageClients, can
                             className="client-option"
                             onClick={() => {
                               addClient(client);
+                              setClientError(false);
                               setShowClientDropdown(false);
                             }}
                           >

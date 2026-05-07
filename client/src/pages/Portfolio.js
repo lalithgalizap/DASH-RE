@@ -150,7 +150,6 @@ function PortfolioContent() {
   const totalPlannedDue = clientFilteredProjects.reduce((sum, p) => sum + (p.totalMilestonesDue || 0), 0);
   const totalCompletedDue = clientFilteredProjects.reduce((sum, p) => sum + (p.completedMilestonesDue || 0), 0);
   const portfolioActualProgress = totalPlannedDue > 0 ? Math.round((totalCompletedDue / totalPlannedDue) * 100) : 0;
-  const portfolioVariance = portfolioActualProgress - 100; // 100 = expected completion
 
   const summaryHighlights = [
     {
@@ -182,9 +181,11 @@ function PortfolioContent() {
     },
     {
       label: 'Planned vs Actual',
-      value: `${portfolioVariance >= 0 ? '+' : ''}${portfolioVariance}%`,
-      helper: portfolioVariance >= 0 ? 'Ahead of schedule' : `${Math.abs(portfolioVariance)}% behind schedule`,
-      tone: portfolioVariance >= 0 ? 'primary' : 'danger',
+      value: totalPlannedDue > 0 ? `${portfolioActualProgress}%` : 'N/A',
+      helper: totalPlannedDue > 0
+        ? `${totalCompletedDue} of ${totalPlannedDue} due milestones completed`
+        : 'No milestones due yet',
+      tone: portfolioActualProgress >= 80 ? 'primary' : portfolioActualProgress >= 50 ? 'warning' : 'danger',
       type: 'plannedVsActual',
       icon: <TrendingUp size={20} color="#9333ea" />,
       iconBg: '#f3e8ff'

@@ -80,7 +80,7 @@ class DatabaseAdapter {
 
   // Users
   async getAllUsers() {
-    const users = await models.User.find().populate('role_id').populate('manager_id').populate('client_id').lean();
+    const users = await models.User.find().populate('role_id').populate('manager_id').populate('client_id').populate('product_id').lean();
     return users.map(u => ({ 
       ...u, 
       id: u._id.toString(), 
@@ -90,12 +90,20 @@ class DatabaseAdapter {
       manager_id: u.manager_id?._id.toString(),
       manager_name: u.manager_id?.username,
       client_id: u.client_id?._id.toString(),
-      client_name: u.client_id?.name
+      client_name: u.client_id?.name,
+      product_id: u.product_id?._id.toString(),
+      product_name: u.product_id?.name,
+      in_org: u.in_org !== false,
+      quarter_activity: (u.quarter_activity || []).map(a => ({
+        quarter: a.quarter,
+        year:    Number(a.year),
+        status:  a.status
+      }))
     }));
   }
 
   async getUserById(id) {
-    const user = await models.User.findById(id).populate('role_id').populate('manager_id').populate('client_id').lean();
+    const user = await models.User.findById(id).populate('role_id').populate('manager_id').populate('client_id').populate('product_id').lean();
     if (!user) return null;
     return { 
       ...user, 
@@ -106,12 +114,14 @@ class DatabaseAdapter {
       manager_id: user.manager_id?._id.toString(),
       manager_name: user.manager_id?.username,
       client_id: user.client_id?._id.toString(),
-      client_name: user.client_id?.name
+      client_name: user.client_id?.name,
+      product_id: user.product_id?._id.toString(),
+      product_name: user.product_id?.name,
     };
   }
 
   async getUserByUsername(username) {
-    const user = await models.User.findOne({ username }).populate('role_id').populate('manager_id').populate('client_id').lean();
+    const user = await models.User.findOne({ username }).populate('role_id').populate('manager_id').populate('client_id').populate('product_id').lean();
     if (!user) return null;
     return { 
       ...user, 
@@ -122,12 +132,14 @@ class DatabaseAdapter {
       manager_id: user.manager_id?._id.toString(),
       manager_name: user.manager_id?.username,
       client_id: user.client_id?._id.toString(),
-      client_name: user.client_id?.name
+      client_name: user.client_id?.name,
+      product_id: user.product_id?._id.toString(),
+      product_name: user.product_id?.name,
     };
   }
 
   async getUserByEmail(email) {
-    const user = await models.User.findOne({ email: email.toLowerCase() }).populate('role_id').populate('manager_id').populate('client_id').lean();
+    const user = await models.User.findOne({ email: email.toLowerCase() }).populate('role_id').populate('manager_id').populate('client_id').populate('product_id').lean();
     if (!user) return null;
     return { 
       ...user, 
@@ -138,7 +150,9 @@ class DatabaseAdapter {
       manager_id: user.manager_id?._id.toString(),
       manager_name: user.manager_id?.username,
       client_id: user.client_id?._id.toString(),
-      client_name: user.client_id?.name
+      client_name: user.client_id?.name,
+      product_id: user.product_id?._id.toString(),
+      product_name: user.product_id?.name,
     };
   }
 

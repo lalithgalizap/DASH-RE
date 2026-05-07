@@ -145,25 +145,38 @@ export const calculateProjectMetrics = (documents) => {
   const upcomingMilestoneDetails = [];
   const allMilestoneDetails = [];
 
-  // Planned vs Actual Progress calculation
-  // Count milestones that should be done by today (planned end date <= today)
-  const milestonesDueByToday = milestones.filter(m => {
+  // ── Planned vs Actual ────────────────────────────────────────────────────
+  // Rules:
+  //   - Past/today + completed     → included, counts as done
+  //   - Past/today + not completed → included, counts as NOT done (overdue)
+  //   - Future + completed         → included, counts as done (early completion)
+  //   - Future + not completed     → EXCLUDED (not due yet, don't penalise)
+  const isMilestoneCompleted = (m) => {
+    const statusDone = m.Status &&
+      (m.Status.toLowerCase() === 'completed' || m.Status.toLowerCase() === 'complete');
+    const pctRaw  = m['% Complete'] ?? m['Percent Complete'] ?? m['PercentComplete'] ?? null;
+    const pctNum  = Number(pctRaw);
+    // Excel stores % Complete as a decimal fraction (1 = 100%) or as a whole number (100)
+    const pctDone = pctRaw !== null && pctRaw !== undefined &&
+      (String(pctRaw).replace('%', '').trim() === '100' || pctNum === 100 || pctNum === 1);
+    return statusDone || pctDone;
+  };
+
+  const relevantMilestones = milestones.filter(m => {
     if (!m['Planned End Date']) return false;
-    const endDate = convertExcelDateToJS(m['Planned End Date']);
-    if (!endDate) return false;
-    endDate.setHours(0, 0, 0, 0);
-    return endDate <= today;
+    const d = convertExcelDateToJS(m['Planned End Date']);
+    if (!d) return false;
+    d.setHours(0, 0, 0, 0);
+    const isPast = d <= today;
+    return isPast || isMilestoneCompleted(m); // include future only if already completed
   });
 
-  const totalMilestonesDue = milestonesDueByToday.length;
-  const completedMilestonesDue = milestonesDueByToday.filter(m => 
-    m.Status && (m.Status.toLowerCase() === 'completed' || m.Status.toLowerCase() === 'complete')
-  ).length;
-
-  // Calculate percentages
-  const plannedProgress = totalMilestonesDue > 0 ? 100 : 0; // Should be 100% complete by today
-  const actualProgress = totalMilestonesDue > 0 ? Math.round((completedMilestonesDue / totalMilestonesDue) * 100) : 0;
-  const plannedVsActualProgress = actualProgress - plannedProgress; // Negative = behind schedule
+  const totalMilestonesDue     = relevantMilestones.length;
+  const completedMilestonesDue = relevantMilestones.filter(isMilestoneCompleted).length;
+  const plannedProgress        = totalMilestonesDue > 0 ? 100 : 0;
+  const actualProgress         = totalMilestonesDue > 0
+    ? Math.round((completedMilestonesDue / totalMilestonesDue) * 100) : 0;
+  const plannedVsActualProgress = actualProgress - plannedProgress;
 
   milestones.forEach(m => {
     if (!m['Planned End Date']) return;

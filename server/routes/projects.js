@@ -125,6 +125,11 @@ router.get('/:id', async (req, res) => {
 router.post('/', authenticate, requirePermission('projects', 'add_delete'), async (req, res) => {
   try {
     const { name, priority, stage, summary, status, clients, links, owner, vertical, region, sponsor, anchor_customer, spoc, actionItem, riskSummary, mitigationPlan, sowStatus } = req.body;
+
+    if (!clients || !clients.trim()) {
+      return res.status(400).json({ error: 'At least one client is required.' });
+    }
+
     const result = await dbAdapter.createProject({ name, priority, stage, summary, status, clients, links, owner, vertical, region, sponsor, anchor_customer, spoc, actionItem, riskSummary, mitigationPlan, sowStatus });
     getPortfolioCache().clear();
     res.json(result);
@@ -137,6 +142,10 @@ router.post('/', authenticate, requirePermission('projects', 'add_delete'), asyn
 router.put('/:id', authenticate, requirePermission('projects', 'edit'), async (req, res) => {
   try {
     const { name, priority, stage, summary, status, clients, links, owner, vertical, region, sponsor, anchor_customer, spoc, actionItem, riskSummary, mitigationPlan, sowStatus, dashboardUpdatedAt } = req.body;
+
+    if (clients !== undefined && (!clients || !clients.trim())) {
+      return res.status(400).json({ error: 'At least one client is required.' });
+    }
     
     // Build update object
     const updateData = { name, priority, stage, summary, status, clients, links, owner, vertical, region, sponsor, anchor_customer, spoc, actionItem, riskSummary, mitigationPlan, sowStatus };
