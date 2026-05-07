@@ -87,6 +87,10 @@ export const AuthProvider = ({ children }) => {
     return user?.role === 'Manager' || user?.role_name === 'Manager';
   };
 
+  const isResource = () => {
+    return user?.role === 'Resource' || user?.role_name === 'Resource';
+  };
+
   const isCSP = () => {
     return user?.role === 'CSP' || user?.role_name === 'CSP';
   };
@@ -166,6 +170,7 @@ export const AuthProvider = ({ children }) => {
     hasPermission,
     isAdmin,
     isManager,
+    isResource,
     isCSP,
     canManagePerformance,
     canAddClients,

@@ -2,8 +2,8 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-export const ProtectedRoute = ({ children, requirePermission, resource, action }) => {
-  const { isAuthenticated, loading, hasPermission } = useAuth();
+export const ProtectedRoute = ({ children, requirePermission, resource, action, blockRoles }) => {
+  const { isAuthenticated, loading, hasPermission, user } = useAuth();
 
   if (loading) {
     return (
@@ -16,6 +16,16 @@ export const ProtectedRoute = ({ children, requirePermission, resource, action }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Block specific roles from accessing this route
+  if (blockRoles && blockRoles.includes(user?.role_name)) {
+    return (
+      <div className="access-denied">
+        <h2>Access Denied</h2>
+        <p>You don't have permission to access this page.</p>
+      </div>
+    );
   }
 
   if (requirePermission && resource && action) {

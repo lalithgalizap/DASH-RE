@@ -170,7 +170,49 @@ const UserManagement = () => {
   /* ── In Org / Out Of Org toggle ── */
   const handleToggleOrg = async (user) => {
     try {
-      await axios.put(`/api/users/${user.id}`, { in_org: !user.in_org });
+      const goingOutOfOrg = user.in_org !== false; // true means currently In Org, toggling to Out Of Org
+
+      const updatePayload = { in_org: !user.in_org };
+
+      if (goingOutOfOrg) {
+        // Auto-mark all future quarters (from next quarter onwards) as inactive
+        const today = new Date();
+        const currentMonth = today.getMonth(); // 0-11
+        const currentYear = today.getFullYear();
+        // Current quarter index (0-3)
+        const currentQIdx = Math.floor(currentMonth / 3);
+        // Next quarter
+        const nextQIdx = (currentQIdx + 1) % 4;
+        const nextQYear = nextQIdx === 0 ? currentYear + 1 : currentYear;
+        const nextQ = QUARTERS[nextQIdx];
+
+        // Build updated quarter_activity: keep existing entries, add/overwrite future ones as inactive
+        const existingActivity = [...(user.quarter_activity || [])];
+
+        // Mark next quarter and all subsequent quarters in the displayed years as inactive
+        const futureSlots = [];
+        YEARS.forEach(year => {
+          QUARTERS.forEach((q, qi) => {
+            const isNextOrFuture =
+              year > nextQYear ||
+              (year === nextQYear && qi >= nextQIdx);
+            if (isNextOrFuture) {
+              futureSlots.push({ quarter: q, year });
+            }
+          });
+        });
+
+        // Merge: overwrite future slots with inactive, keep past entries
+        const mergedMap = {};
+        existingActivity.forEach(a => { mergedMap[`${a.quarter}-${a.year}`] = a; });
+        futureSlots.forEach(({ quarter, year }) => {
+          mergedMap[`${quarter}-${year}`] = { quarter, year, status: 'inactive' };
+        });
+
+        updatePayload.quarter_activity = Object.values(mergedMap);
+      }
+
+      await axios.put(`/api/users/${user.id}`, updatePayload);
       fetchUsers();
     } catch (error) {
       alert(error.response?.data?.error || 'Error updating user');
@@ -305,7 +347,7 @@ const UserManagement = () => {
               <th>Role</th>
               {viewMode === 'manager-resource' && <th>Client</th>}
               {viewMode === 'manager-resource' && <th>Manager</th>}
-              <th>Status</th>
+              {viewMode === 'manager-resource' && <th>Status</th>}
               <th>Created</th>
               <th>Actions</th>
             </tr>
@@ -334,21 +376,23 @@ const UserManagement = () => {
                       : <span style={{ fontSize: '13px', color: '#94a3b8' }}>—</span>}
                   </td>
                 )}
-                {/* In Org / Out Of Org badge */}
-                <td>
-                  <button
-                    onClick={() => handleToggleOrg(user)}
-                    title="Toggle In Org / Out Of Org"
-                    style={{
-                      padding: '3px 10px', borderRadius: '20px', border: 'none',
-                      fontSize: '11px', fontWeight: 600, cursor: 'pointer',
-                      background: user.in_org !== false ? '#dcfce7' : '#fee2e2',
-                      color:      user.in_org !== false ? '#16a34a' : '#dc2626',
-                    }}
-                  >
-                    {user.in_org !== false ? 'In Org' : 'Out Of Org'}
-                  </button>
-                </td>
+                {/* In Org / Out Of Org badge — only in Manager/Resource view */}
+                {viewMode === 'manager-resource' && (
+                  <td>
+                    <button
+                      onClick={() => handleToggleOrg(user)}
+                      title="Toggle In Org / Out Of Org"
+                      style={{
+                        padding: '3px 10px', borderRadius: '20px', border: 'none',
+                        fontSize: '11px', fontWeight: 600, cursor: 'pointer',
+                        background: user.in_org !== false ? '#dcfce7' : '#fee2e2',
+                        color:      user.in_org !== false ? '#16a34a' : '#dc2626',
+                      }}
+                    >
+                      {user.in_org !== false ? 'In Org' : 'Out Of Org'}
+                    </button>
+                  </td>
+                )}
                 <td>{new Date(user.created_at).toLocaleDateString()}</td>
                 <td className="actions">
                   <button className="btn-icon" onClick={() => handleToggleActive(user)}
@@ -366,9 +410,14 @@ const UserManagement = () => {
                   {EXCLUDED_ROLES.includes(user.role_name) && (
                     <button
                       className="btn-icon"
-                      onClick={() => openQuarterModal(user)}
-                      title="Set Quarter"
-                      style={{ color: '#7c3aed', borderColor: '#7c3aed' }}
+                      onClick={() => user.in_org !== false && openQuarterModal(user)}
+                      title={user.in_org === false ? 'Out Of Org — quarter activity locked' : 'Set Quarter Activity'}
+                      style={{
+                        color: user.in_org === false ? '#cbd5e1' : '#7c3aed',
+                        borderColor: user.in_org === false ? '#e2e8f0' : '#7c3aed',
+                        cursor: user.in_org === false ? 'not-allowed' : 'pointer',
+                        opacity: user.in_org === false ? 0.5 : 1,
+                      }}
                     >
                       <BarChart2 size={18} />
                     </button>

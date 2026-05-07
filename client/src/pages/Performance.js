@@ -1178,7 +1178,7 @@ function Performance() {
                       {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
                   </div>
-                  {canManagePerformance && (
+                  {canManagePerformance() && (
                     <button className="btn-primary" onClick={openUpload}>
                       <Upload size={16} />
                       Upload Report
@@ -1269,17 +1269,19 @@ function Performance() {
                           </td>
                           <td>
                             <div className="action-buttons">
-                              <button
-                                className="action-btn view-btn"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openEditReport(report);
-                                }}
-                                title="Edit Report"
-                              >
-                                <Pencil size={16} />
-                              </button>
-                              {canManagePerformance && (
+                              {canManagePerformance() && (
+                                <button
+                                  className="action-btn view-btn"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openEditReport(report);
+                                  }}
+                                  title="Edit Report"
+                                >
+                                  <Pencil size={16} />
+                                </button>
+                              )}
+                              {canManagePerformance() && (
                                 <button
                                   className="action-btn delete-btn"
                                   onClick={(e) => {

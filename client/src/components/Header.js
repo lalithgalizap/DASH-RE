@@ -8,7 +8,7 @@ import './Header.css';
 function Header() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAuthenticated, user, logout, hasPermission, isAdmin, isCSP } = useAuth();
+  const { isAuthenticated, user, logout, hasPermission, isAdmin, isCSP, isResource } = useAuth();
   const [showChangePassword, setShowChangePassword] = useState(false);
 
   const handleLogout = () => {
@@ -39,7 +39,7 @@ function Header() {
                   Portfolio
                 </Link>
               )}
-              {(isAdmin() || isCSP() || hasPermission('performance', 'view')) && (
+              {(isAdmin() || isCSP() || (hasPermission('performance', 'view') && !isResource())) && (
                 <Link to="/performance" className={`nav-link ${location.pathname === '/performance' ? 'active' : ''}`}>
                   Performance
                 </Link>

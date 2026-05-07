@@ -45,6 +45,11 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
+    // Block disabled accounts (only when explicitly false/0 — missing field means active)
+    if (user.is_active === false || user.is_active === 0) {
+      return res.status(403).json({ error: 'Your account has been disabled. Please contact an administrator.' });
+    }
+
     const validPassword = bcrypt.compareSync(password, user.password);
     if (!validPassword) {
       return res.status(401).json({ error: 'Invalid credentials' });
@@ -139,6 +144,15 @@ router.post('/forgot-password', async (req, res) => {
     const user = await dbAdapter.getUserByEmail?.(email) || null;
     
     if (user) {
+      // Block disabled accounts — don't send reset code
+      if (!user.is_active) {
+        // Return same generic response to avoid account enumeration
+        return res.json({ 
+          success: true, 
+          message: 'If an account exists with this email, a reset code has been sent.' 
+        });
+      }
+
       // Generate anonymous code
       const code = generateResetCode();
       const emailHash = hashEmail(email);
@@ -257,6 +271,11 @@ router.post('/reset-password', async (req, res) => {
     const user = await dbAdapter.getUserById(decoded.id);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Block disabled accounts (only when explicitly false/0 — missing field means active)
+    if (user.is_active === false || user.is_active === 0) {
+      return res.status(403).json({ error: 'Your account has been disabled. Please contact an administrator.' });
     }
     
     // Hash and update password

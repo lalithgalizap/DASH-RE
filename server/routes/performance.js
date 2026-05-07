@@ -248,17 +248,11 @@ router.get('/resources', authenticate, async (req, res) => {
     }
     
     if (isManager && !canViewAll) {
-      // Manager only sees their own resources + self
-      resources = resources.filter(r => r.manager_id === user.id || r.id === user.id);
-      // Ensure manager themselves is in the list so they can see their own reports
-      if (!resources.some(r => r.id === user.id)) {
-        if (!client_id || user.client_id === client_id) {
-          resources = [...resources, user];
-        }
-      }
+      // Manager only sees resources assigned to them — NOT themselves
+      resources = resources.filter(r => r.manager_id === user.id);
     } else if (!canViewAll) {
-      // Resource user only sees themselves
-      resources = resources.filter(r => r.id === user.id);
+      // Resource role — no access to performance page
+      return res.status(403).json({ error: 'Resources do not have access to performance data.' });
     }
 
     // Only show managers/resources who have a product assigned

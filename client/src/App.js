@@ -1,6 +1,6 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ProtectedRoute, AdminRoute, AdminOrCSPRoute } from './components/ProtectedRoute';
 import Header from './components/Header';
 import Dashboard from './pages/Dashboard';
@@ -14,6 +14,20 @@ import WeeklyUpdates from './pages/WeeklyUpdates';
 import Performance from './pages/Performance';
 import './App.css';
 
+// Redirects Resource role to /weekly-updates, everyone else to /
+function RootRedirect() {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  if (user?.role_name === 'Resource' || user?.role === 'Resource') {
+    return <Navigate to="/weekly-updates" replace />;
+  }
+  return (
+    <ProtectedRoute requirePermission resource="dashboard" action="view">
+      <Dashboard />
+    </ProtectedRoute>
+  );
+}
+
 function App() {
   return (
     <AuthProvider>
@@ -22,11 +36,7 @@ function App() {
           <Header />
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/" element={
-              <ProtectedRoute requirePermission resource="dashboard" action="view">
-                <Dashboard />
-              </ProtectedRoute>
-            } />
+            <Route path="/" element={<RootRedirect />} />
             <Route path="/project/:id" element={
               <ProtectedRoute requirePermission resource="projects" action="view">
                 <ProjectDetail />
@@ -43,7 +53,7 @@ function App() {
               </ProtectedRoute>
             } />
             <Route path="/performance" element={
-              <ProtectedRoute requirePermission resource="performance" action="view">
+              <ProtectedRoute requirePermission resource="performance" action="view" blockRoles={['Resource']}>
                 <Performance />
               </ProtectedRoute>
             } />
