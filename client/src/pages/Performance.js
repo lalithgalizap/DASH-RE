@@ -44,6 +44,7 @@ function Performance() {
   const [showNoReportModal, setShowNoReportModal] = useState(false);
   const [noReportSearch, setNoReportSearch] = useState('');
   const [noReportRoleFilter, setNoReportRoleFilter] = useState('all'); // 'all' | 'manager' | 'resource'
+  const [scorecardSearch, setScorecardSearch] = useState('');
 
   // Scorecard drill-down modal
   const [scorecardModal, setScorecardModal] = useState(null);
@@ -600,22 +601,35 @@ function Performance() {
             return (
               <div className="metrics-cards-row three-col">
                 <div
-                  className="metric-card-large metric-card-compact"
+                  className="metric-card-large perf-total-resources-card"
                   onClick={() => withoutReport > 0 && setShowNoReportModal(true)}
                   style={{ cursor: withoutReport > 0 ? 'pointer' : 'default' }}
                 >
                   <h5>Total Resources</h5>
-                  <div className="metric-card-body total-resources-body">
-                    <div className="metric-big-value">{totalFiltered}</div>
-                    <div className="metric-text-block">
-                      <div className="metric-big-label">Resources &amp; Managers</div>
+                  <div className="perf-total-resources-body">
+                    <div className="perf-total-number">{totalFiltered}</div>
+                    <div className="perf-total-meta">
+                      <div className="perf-total-label">Resources &amp; Managers</div>
+                      <div className="perf-report-bar-wrap">
+                        <div className="perf-report-bar">
+                          <div
+                            className="perf-report-bar-fill"
+                            style={{ width: totalFiltered > 0 ? `${Math.round(withReport / totalFiltered * 100)}%` : '0%' }}
+                          />
+                        </div>
+                        <span className="perf-report-bar-label">
+                          {withReport}/{totalFiltered} with reports
+                        </span>
+                      </div>
                       {withoutReport > 0 ? (
-                        <div className="metric-missing-breakdown">
-                          <span className="highlight-missing">Without Reports: {withoutReport}</span>
+                        <div className="perf-missing-tag">
+                          <span className="perf-missing-dot" />
+                          {withoutReport} without report{withoutReport !== 1 ? 's' : ''} — click to view
                         </div>
                       ) : (
-                        <div className="metric-all-good">
-                          <CheckCircle size={14} color="#22c55e" /> All have reports
+                        <div className="perf-all-good-tag">
+                          <CheckCircle size={13} color="#16a34a" />
+                          All have reports
                         </div>
                       )}
                     </div>
@@ -1672,88 +1686,120 @@ function Performance() {
 
       {/* SCORECARD DRILL-DOWN MODAL */}
       {scorecardModal && (
-        <div className="modal-overlay" onClick={() => setScorecardModal(null)}>
-          <div className="modal-content" style={{ maxWidth: '640px' }} onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span
-                  style={{
-                    display: 'inline-block',
-                    width: '12px', height: '12px',
-                    borderRadius: '50%',
-                    background: scorecardModal.color,
-                    flexShrink: 0
-                  }}
-                />
-                {scorecardModal.label}
-                <span style={{ fontSize: '14px', fontWeight: 500, color: '#64748b' }}>
-                  ({scorecardModal.resources.length})
-                </span>
-              </h2>
-              <button className="btn-icon" onClick={() => setScorecardModal(null)}>
-                <X size={18} />
+        <div className="modal-overlay" onClick={() => { setScorecardModal(null); setScorecardSearch(''); }}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            maxWidth: '800px',
+            width: '90%',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            {/* Header */}
+            <div className="modal-header" style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '20px', borderBottom: '1px solid #e5e7eb'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{
+                  width: 12, height: 12, borderRadius: '50%',
+                  background: scorecardModal.color, flexShrink: 0, display: 'inline-block'
+                }} />
+                <div>
+                  <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 600 }}>{scorecardModal.label}</h2>
+                  <p style={{ margin: '3px 0 0', fontSize: '13px', color: '#6b7280' }}>
+                    {scorecardModal.resources.length} resource{scorecardModal.resources.length !== 1 ? 's' : ''}
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => { setScorecardModal(null); setScorecardSearch(''); }}
+                style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#6b7280' }}>
+                ×
               </button>
             </div>
-            <div className="modal-body" style={{ padding: '0', maxHeight: '60vh', overflowY: 'auto' }}>
-              <table className="perf-data-table" style={{ width: '100%' }}>
-                <thead>
-                  <tr>
-                    <th>RESOURCE</th>
-                    <th>CLIENT</th>
-                    <th>ROLE / TEAM</th>
-                    <th>QUARTER</th>
-                    <th>RATING</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {scorecardModal.resources.map(resource => {
-                    const clientName = resource.latest_report?.client_name_snapshot
-                      || clients.find(c => c.id === resource.client_id)?.name
-                      || '—';
-                    return (
-                      <tr
-                        key={resource.id}
-                        className="perf-table-row"
-                        style={{ cursor: 'pointer' }}
-                        onClick={() => { handleResourceClick(resource); setScorecardModal(null); }}
-                      >
-                        <td>
-                          <div className="resource-cell">
-                            <div className="resource-avatar" style={{ background: getAvatarColor(resource.username) }}>
-                              {getInitials(resource.username)}
-                            </div>
-                            <span className="resource-name">{resource.username}</span>
-                          </div>
-                        </td>
-                        <td>{clientName}</td>
-                        <td>
-                          <span className="role-team-text">
-                            {resource.latest_report?.role_team || resource.role_name || '—'}
-                          </span>
-                        </td>
-                        <td>
-                          {resource.latest_report?.quarter
-                            ? `${resource.latest_report.quarter} ${resource.latest_report.year}`
-                            : '—'}
-                        </td>
-                        <td>
-                          <div className="rating-display">
-                            {resource.latest_report?.rating ? (
-                              <>
-                                <span className="rating-value">{resource.latest_report.rating}</span>
-                                <span className="rating-stars">
-                                  {'★'.repeat(Math.round(resource.latest_report.rating))}
-                                  {'☆'.repeat(5 - Math.round(resource.latest_report.rating))}
-                                </span>
-                              </>
-                            ) : <span className="rating-empty">—</span>}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+
+            {/* Search */}
+            <div style={{ padding: '12px 20px', borderBottom: '1px solid #f1f5f9' }}>
+              <div style={{ position: 'relative' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                  style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', pointerEvents: 'none' }}>
+                  <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Search resources..."
+                  value={scorecardSearch}
+                  onChange={e => setScorecardSearch(e.target.value)}
+                  style={{
+                    width: '100%', padding: '8px 12px 8px 34px', fontSize: '13px',
+                    border: '1px solid #e5e7eb', borderRadius: '8px', outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="modal-body" style={{ padding: '0', overflow: 'hidden' }}>
+              <div style={{ overflowX: 'auto', overflowY: 'auto', minHeight: '336px', maxHeight: '336px' }}>
+                <table className="perf-data-table" style={{ width: '100%' }}>
+                  <thead>
+                    <tr>
+                      <th style={{ position: 'sticky', top: 0, zIndex: 1 }}>RESOURCE</th>
+                      <th style={{ position: 'sticky', top: 0, zIndex: 1 }}>CLIENT</th>
+                      <th style={{ position: 'sticky', top: 0, zIndex: 1 }}>ROLE / TEAM</th>
+                      <th style={{ position: 'sticky', top: 0, zIndex: 1 }}>QUARTER</th>
+                      <th style={{ position: 'sticky', top: 0, zIndex: 1 }}>RATING</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {scorecardModal.resources
+                      .filter(r => !scorecardSearch ||
+                        r.username?.toLowerCase().includes(scorecardSearch.toLowerCase()) ||
+                        (r.latest_report?.client_name_snapshot || clients.find(c => c.id === r.client_id)?.name || '').toLowerCase().includes(scorecardSearch.toLowerCase())
+                      )
+                      .map(resource => {
+                        const clientName = resource.latest_report?.client_name_snapshot
+                          || clients.find(c => c.id === resource.client_id)?.name
+                          || '—';
+                        return (
+                          <tr
+                            key={resource.id}
+                            className="perf-table-row"
+                            style={{ cursor: 'pointer' }}
+                            onClick={() => { handleResourceClick(resource); setScorecardModal(null); setScorecardSearch(''); }}
+                          >
+                            <td>
+                              <div className="resource-cell">
+                                <div className="resource-avatar" style={{ background: getAvatarColor(resource.username) }}>
+                                  {getInitials(resource.username)}
+                                </div>
+                                <span className="resource-name">{resource.username}</span>
+                              </div>
+                            </td>
+                            <td>{clientName}</td>
+                            <td><span className="role-team-text">{resource.latest_report?.role_team || resource.role_name || '—'}</span></td>
+                            <td>{resource.latest_report?.quarter ? `${resource.latest_report.quarter} ${resource.latest_report.year}` : '—'}</td>
+                            <td>
+                              <div className="rating-display">
+                                {resource.latest_report?.rating ? (
+                                  <>
+                                    <span className="rating-value">{resource.latest_report.rating}</span>
+                                    <span className="rating-stars">
+                                      {'★'.repeat(Math.round(resource.latest_report.rating))}
+                                      {'☆'.repeat(5 - Math.round(resource.latest_report.rating))}
+                                    </span>
+                                  </>
+                                ) : <span className="rating-empty">—</span>}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
@@ -1762,113 +1808,125 @@ function Performance() {
       {/* NO REPORT RESOURCES MODAL */}
       {showNoReportModal && (
         <div className="modal-overlay" onClick={() => setShowNoReportModal(false)}>
-          <div className="modal-content no-report-modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <div className="modal-header-left">
-                <h2>Without Performance Reports</h2>
-                <span className="modal-count">{noReportResources.length} total</span>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            maxWidth: '800px',
+            width: '90%',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            {/* Header */}
+            <div className="modal-header" style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '20px', borderBottom: '1px solid #e5e7eb'
+            }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 600 }}>Without Performance Reports</h2>
+                <p style={{ margin: '3px 0 0', fontSize: '13px', color: '#6b7280' }}>
+                  {noReportResources.length} people missing a report this quarter
+                </p>
               </div>
-              <button className="btn-icon" onClick={() => setShowNoReportModal(false)}><X size={18} /></button>
+              <button onClick={() => setShowNoReportModal(false)}
+                style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#6b7280' }}>
+                ×
+              </button>
             </div>
-            
-            <div className="modal-filters">
-              <div className="modal-search">
-                <Search size={16} className="search-icon" />
+
+            {/* Search + toggle */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '10px',
+              padding: '12px 20px', borderBottom: '1px solid #f1f5f9', flexWrap: 'wrap'
+            }}>
+              <div style={{ position: 'relative', flex: 1, minWidth: '160px' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                  style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', pointerEvents: 'none' }}>
+                  <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+                </svg>
                 <input
                   type="text"
-                  placeholder="Search resources or managers..."
+                  placeholder="Search by name or client..."
                   value={noReportSearch}
                   onChange={e => setNoReportSearch(e.target.value)}
-                  className="modal-search-input"
+                  style={{
+                    width: '100%', padding: '8px 12px 8px 34px', fontSize: '13px',
+                    border: '1px solid #e5e7eb', borderRadius: '8px', outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
                 />
-                {noReportSearch && (
-                  <button className="clear-search" onClick={() => setNoReportSearch('')}>
-                    <X size={14} />
-                  </button>
-                )}
               </div>
-              
-              <div className="modal-role-toggle">
-                <button
-                  className={`role-toggle-btn ${noReportRoleFilter === 'all' ? 'active' : ''}`}
-                  onClick={() => setNoReportRoleFilter('all')}
-                >
-                  All
-                </button>
-                <button
-                  className={`role-toggle-btn ${noReportRoleFilter === 'manager' ? 'active' : ''}`}
-                  onClick={() => setNoReportRoleFilter('manager')}
-                >
-                  <Users size={14} />
-                  Managers
-                </button>
-                <button
-                  className={`role-toggle-btn ${noReportRoleFilter === 'resource' ? 'active' : ''}`}
-                  onClick={() => setNoReportRoleFilter('resource')}
-                >
-                  <User size={14} />
-                  Resources
-                </button>
+              <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: '8px', padding: '3px', gap: '2px' }}>
+                {[{ key: 'all', label: 'All' }, { key: 'manager', label: 'Managers' }, { key: 'resource', label: 'Resources' }].map(({ key, label }) => (
+                  <button key={key} onClick={() => setNoReportRoleFilter(key)} style={{
+                    padding: '5px 12px', border: 'none', borderRadius: '6px', fontSize: '12px',
+                    fontWeight: noReportRoleFilter === key ? 600 : 500, cursor: 'pointer',
+                    background: noReportRoleFilter === key ? '#fff' : 'transparent',
+                    color: noReportRoleFilter === key ? '#0f172a' : '#64748b',
+                    boxShadow: noReportRoleFilter === key ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                    transition: 'all 0.15s'
+                  }}>{label}</button>
+                ))}
               </div>
             </div>
-            
-            <div className="modal-body no-report-list">
-              {(() => {
-                const filtered = noReportResources.filter(r => {
-                  const matchesSearch = !noReportSearch || 
-                    r.username?.toLowerCase().includes(noReportSearch.toLowerCase()) ||
-                    r.client_name?.toLowerCase().includes(noReportSearch.toLowerCase());
-                  const matchesRole = noReportRoleFilter === 'all' || 
-                    r.role_name?.toLowerCase() === noReportRoleFilter;
-                  return matchesSearch && matchesRole;
-                });
-                
-                const managersCount = filtered.filter(r => r.role_name?.toLowerCase() === 'manager').length;
-                const resourcesCount = filtered.filter(r => r.role_name?.toLowerCase() === 'resource').length;
-                
-                return filtered.length === 0 ? (
-                  <div className="empty-state compact">
+
+            {/* Body */}
+            <div className="modal-body" style={{ padding: '0', overflow: 'hidden' }}>
+              <div style={{ overflowY: 'auto', minHeight: '392px', maxHeight: '392px', padding: '12px 20px' }}>
+                {(() => {
+                  const filtered = noReportResources.filter(r => {
+                    const matchesSearch = !noReportSearch ||
+                      r.username?.toLowerCase().includes(noReportSearch.toLowerCase()) ||
+                      r.client_name?.toLowerCase().includes(noReportSearch.toLowerCase());
+                    const matchesRole = noReportRoleFilter === 'all' || r.role_name?.toLowerCase() === noReportRoleFilter;
+                    return matchesSearch && matchesRole;
+                  });
+
+                if (filtered.length === 0) return (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '40px 20px', color: '#6b7280', fontSize: '14px' }}>
                     <CheckCircle size={32} color="#22c55e" />
-                    <p>{noReportResources.length === 0 ? 'All resources and managers have feedback.' : 'No matches found for your filters.'}</p>
+                    <p style={{ margin: 0 }}>{noReportResources.length === 0 ? 'All resources and managers have reports.' : 'No matches found.'}</p>
                   </div>
-                ) : (
-                  <>
-                    <div className="no-report-summary">
-                      <span className="summary-item managers">
-                        <span className="dot manager-dot"></span>
-                        {managersCount} Manager{managersCount !== 1 ? 's' : ''}
-                      </span>
-                      <span className="summary-item resources">
-                        <span className="dot resource-dot"></span>
-                        {resourcesCount} Resource{resourcesCount !== 1 ? 's' : ''}
-                      </span>
-                    </div>
-                    <div className="no-report-items">
-                      {filtered.map(resource => (
-                        <div
-                          key={resource.id}
-                          className="no-report-item"
-                          onClick={() => goToResourceFromModal(resource)}
-                        >
-                          <div className="resource-cell">
-                            <div className="resource-avatar" style={{ background: getAvatarColor(resource.username) }}>
-                              {getInitials(resource.username)}
-                            </div>
-                            <div className="no-report-info">
-                              <span className="resource-name">{resource.username}</span>
-                              <span className="resource-client">{resource.client_name}</span>
-                              <span className={`role-badge ${resource.role_name?.toLowerCase() === 'manager' ? 'manager' : 'resource'}`}>
-                                {resource.role_name || 'Resource'}
-                              </span>
-                            </div>
-                          </div>
-                          <ChevronLeft size={16} style={{ transform: 'rotate(180deg)', color: '#94a3b8' }} />
+                );
+
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    {filtered.map(resource => (
+                      <div key={resource.id} onClick={() => goToResourceFromModal(resource)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '12px',
+                          padding: '10px 12px', borderRadius: '10px', cursor: 'pointer',
+                          transition: 'background 0.12s'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                      >
+                        <div style={{
+                          width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+                          background: getAvatarColor(resource.username),
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '13px', fontWeight: 700, color: '#fff'
+                        }}>
+                          {getInitials(resource.username)}
                         </div>
-                      ))}
-                    </div>
-                  </>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a' }}>{resource.username}</div>
+                          <div style={{ fontSize: '12px', color: '#64748b' }}>{resource.client_name || '—'}</div>
+                        </div>
+                        <span style={{
+                          fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '20px', flexShrink: 0,
+                          background: resource.role_name?.toLowerCase() === 'manager' ? '#ede9fe' : '#dbeafe',
+                          color: resource.role_name?.toLowerCase() === 'manager' ? '#6d28d9' : '#1d4ed8'
+                        }}>
+                          {resource.role_name || 'Resource'}
+                        </span>
+                        <ChevronLeft size={15} style={{ transform: 'rotate(180deg)', color: '#94a3b8', flexShrink: 0 }} />
+                      </div>
+                    ))}
+                  </div>
                 );
               })()}
+              </div>
             </div>
           </div>
         </div>

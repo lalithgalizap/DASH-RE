@@ -2369,3 +2369,379 @@
   font-size: 10px;
   font-weight: 700;
 }
+
+/* ============================================================
+   TOTAL RESOURCES CARD — redesigned
+   ============================================================ */
+.perf-total-resources-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.perf-total-resources-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  margin-top: 4px;
+}
+
+.perf-total-number {
+  font-size: 52px;
+  font-weight: 800;
+  line-height: 1;
+  color: #0f172a;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #0f172a 0%, #334155 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.perf-total-meta {
+  flex: 1;
+  min-width: 0;
+  padding-top: 4px;
+}
+
+.perf-total-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 10px;
+}
+
+.perf-report-bar-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.perf-report-bar {
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 99px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.perf-report-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #16a34a, #22c55e);
+  border-radius: 99px;
+  transition: width 0.4s ease;
+}
+
+.perf-report-bar-label {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.perf-missing-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #dc2626;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+
+.perf-missing-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ef4444;
+  flex-shrink: 0;
+}
+
+.perf-all-good-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #16a34a;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+
+/* ============================================================
+   PERFORMANCE MODALS — portfolio-style, fixed size
+   ============================================================ */
+.perf-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  padding: 24px;
+}
+
+.perf-modal-box {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
+  width: 560px;
+  max-width: 100%;
+  height: 560px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* Fixed size — does not grow/shrink with content */
+}
+
+.perf-modal-box.wide {
+  width: 720px;
+  height: 600px;
+}
+
+/* Header */
+.perf-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.perf-modal-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.perf-modal-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin: 3px 0 0;
+}
+
+.perf-modal-close {
+  background: none;
+  border: none;
+  font-size: 22px;
+  line-height: 1;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0 2px;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+
+.perf-modal-close:hover {
+  color: #0f172a;
+  background: #f1f5f9;
+}
+
+/* Filters bar */
+.perf-modal-filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 24px;
+  border-bottom: 1px solid #f1f5f9;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.perf-modal-search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 160px;
+}
+
+.perf-modal-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.perf-modal-search-input {
+  width: 100%;
+  padding: 7px 32px 7px 32px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #0f172a;
+  background: #f8fafc;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+
+.perf-modal-search-input:focus {
+  border-color: #94a3b8;
+  background: #fff;
+}
+
+.perf-modal-search-clear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #94a3b8;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+}
+
+.perf-modal-toggle-group {
+  display: flex;
+  background: #f1f5f9;
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.perf-modal-toggle-btn {
+  padding: 5px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  background: transparent;
+  color: #64748b;
+  transition: all 0.15s;
+}
+
+.perf-modal-toggle-btn.active {
+  background: #fff;
+  color: #0f172a;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+/* Body — scrollable */
+.perf-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 24px;
+}
+
+.perf-modal-table-body {
+  padding: 0;
+}
+
+/* List items (no-report modal) */
+.perf-modal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.perf-modal-list-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.perf-modal-list-item:hover {
+  background: #f8fafc;
+}
+
+.perf-modal-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.perf-modal-item-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.perf-modal-item-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.perf-modal-item-sub {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.perf-modal-role-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  flex-shrink: 0;
+}
+
+.perf-modal-role-badge.manager {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.perf-modal-role-badge.resource {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+/* Empty state */
+.perf-modal-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 100%;
+  min-height: 160px;
+  color: #64748b;
+  font-size: 14px;
+  text-align: center;
+}
+
+/* Table inside modal */
+.perf-modal-table {
+  width: 100%;
+  font-size: 13px;
+}
+
+.perf-modal-table thead th {
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+  z-index: 1;
+}
