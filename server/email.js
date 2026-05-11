@@ -7,9 +7,6 @@ const transporter = nodemailer.createTransport({
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS
-  },
-  tls: {
-    ciphers: 'SSLv3'
   }
 });
 
@@ -27,7 +24,7 @@ async function sendWelcomeEmail(to, username, password) {
         <li>Username: ${username}</li>
         <li>Password: ${password}</li>
       </ul>
-      <p>Login at: <a href="http://pmotest.zapcom.ai/login</a></p>
+      <p>Login at: <a href="http://pmotest.zapcom.ai/login">http://pmotest.zapcom.ai/login</a></p>
       <p>Please change your password after your first login.</p>
     `
   };
@@ -85,7 +82,7 @@ async function sendWeeklyUpdateReminder(to, resourceName, weekStarting, managerN
       <p>This is a friendly reminder to submit your weekly update for the week of <strong>${weekLabel}</strong>.</p>
       <p>Please log in to the PMO Dashboard and submit your update at your earliest convenience.</p>
       <br>
-      <p><a href="http://localhost:3000/weekly-updates" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Submit Weekly Update</a></p>
+      <p><a href="http://pmo.zapcom.ai" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Submit Weekly Update</a></p>
       <br>
       ${managerName ? `<p><em>Sent by ${managerName}</em></p>` : ''}
       <br>

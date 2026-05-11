@@ -49,7 +49,7 @@ function Header() {
                   Weekly Updates
                 </Link>
               )}
-              {(isAdmin() || isCSP()) && (
+              {(isAdmin() || isCSP() || hasPermission('clients', 'manage') || hasPermission('products', 'manage') || hasPermission('clients', 'view')) && (
                 <Link to="/clients" className={`nav-link ${location.pathname === '/clients' ? 'active' : ''}`}>
                   Clients
                 </Link>

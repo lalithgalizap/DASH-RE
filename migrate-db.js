@@ -82,9 +82,11 @@ const DESIRED_PERMISSIONS = [
   { permission_name: 'view_users',                 description: 'Can view users' },
   { permission_name: 'manage_import',              description: 'Can import data from Excel files' },
   { permission_name: 'view_portfolio',             description: 'Can view portfolio dashboard' },
-  { permission_name: 'edit_portfolio_health',      description: 'Can edit Portfolio Health' },
+  { permission_name: 'edit_portfolio_health',      description: 'Can edit Portfolio Health table rows' },
   { permission_name: 'manage_clients',             description: 'Can create and delete global clients' },
   { permission_name: 'manage_products',            description: 'Can create and delete global products' },
+  { permission_name: 'view_clients',               description: 'Can view the Clients & Products page (read-only)' },
+  { permission_name: 'add_clients_to_project',     description: 'Can add and edit clients on a project' },
   { permission_name: 'manage_roles',               description: 'Can create, edit, and delete roles' },
   { permission_name: 'view_roles',                 description: 'Can view roles' },
   { permission_name: 'manage_closure_docs',        description: 'Can upload and delete closure documents' },
@@ -105,21 +107,20 @@ const DESIRED_ROLE_PERMISSIONS = {
     'manage_users', 'view_users',
     'manage_import',
     'view_portfolio', 'edit_portfolio_health',
-    'manage_clients', 'manage_products',
+    'manage_clients', 'manage_products', 'view_clients', 'add_clients_to_project',
     'manage_roles', 'view_roles',
     'manage_closure_docs',
     'view_weekly_updates', 'manage_weekly_updates', 'view_global_weekly_updates',
     'view_performance', 'manage_performance', 'manage_staff_augmentation',
   ],
   CSP: [
-    // Dashboard + Projects (read) + Portfolio + Clients/Products + Performance (full) + Weekly Updates (full)
+    // Dashboard + Projects (read) + Portfolio (read + edit) + Performance (read + upload) + Clients (read via auth, no manage)
     'view_dashboard',
     'view_projects',
-    'view_portfolio',
-    'manage_clients', 'manage_products',
-    'manage_import',
+    'view_portfolio', 'edit_portfolio_health',
     'view_performance', 'manage_performance',
     'view_weekly_updates', 'manage_weekly_updates', 'view_global_weekly_updates',
+    'add_clients_to_project',
   ],
   PMO: [
     // Dashboard + Projects (full) + Portfolio + Clients/Products + Import
@@ -142,18 +143,13 @@ const DESIRED_ROLE_PERMISSIONS = {
     'view_portfolio',
   ],
   SLTs: [
-    // Dashboard + Projects (read) + Portfolio (read) + Users/Roles (read)
+    // Dashboard + Projects (read) + Portfolio (read) + Performance (read) + Clients (read) + Users/Roles (read)
     'view_dashboard',
     'view_projects',
     'view_portfolio',
+    'view_performance',
+    'view_clients',
     'view_users', 'view_roles',
-  ],
-  Superuser: [
-    // Dashboard + Projects (full) + Portfolio + Import + Closure docs (no user/role management)
-    'view_dashboard',
-    'view_projects', 'add_delete_projects', 'edit_projects',
-    'view_portfolio',
-    'manage_import', 'manage_closure_docs',
   ],
   Manager: [
     // Weekly Updates + Performance (scoped to own team by server-side RBAC)
@@ -179,19 +175,26 @@ function warn(msg) { console.log(`  ⚠ ${msg}`); }
 
 async function upsertPermissions() {
   console.log('\n[1/4] Syncing permissions…');
-  let added = 0, skipped = 0;
+  let added = 0, updated = 0, skipped = 0;
 
   for (const p of DESIRED_PERMISSIONS) {
     const exists = await Permission.findOne({ permission_name: p.permission_name });
     if (exists) {
-      skipped++;
+      // Update description if it changed
+      if (exists.description !== p.description) {
+        await Permission.updateOne({ _id: exists._id }, { description: p.description });
+        log(`Updated description: ${p.permission_name}`);
+        updated++;
+      } else {
+        skipped++;
+      }
     } else {
       await Permission.create(p);
       log(`Added permission: ${p.permission_name}`);
       added++;
     }
   }
-  console.log(`      ${added} added, ${skipped} already existed.`);
+  console.log(`      ${added} added, ${updated} updated, ${skipped} already correct.`);
 }
 
 async function upsertRoles() {
@@ -213,33 +216,50 @@ async function upsertRoles() {
 
 async function upsertRolePermissions() {
   console.log('\n[3/4] Syncing role-permission links…');
-  let added = 0, skipped = 0, missing = 0;
+  let added = 0, removed = 0, skipped = 0, missing = 0;
 
   // Build lookup maps
   const allPerms = await Permission.find({});
-  const permMap  = Object.fromEntries(allPerms.map(p => [p.permission_name, p._id]));
+  const permMap  = Object.fromEntries(allPerms.map(p => [p.permission_name, p._id.toString()]));
 
   const allRoles = await Role.find({});
-  const roleMap  = Object.fromEntries(allRoles.map(r => [r.role_name, r._id]));
+  const roleMap  = Object.fromEntries(allRoles.map(r => [r.role_name, r._id.toString()]));
 
   for (const [roleName, permNames] of Object.entries(DESIRED_ROLE_PERMISSIONS)) {
     const roleId = roleMap[roleName];
     if (!roleId) { warn(`Role "${roleName}" not found — skipping its permissions`); continue; }
 
+    // Resolve desired permission IDs for this role
+    const desiredPermIds = new Set();
     for (const permName of permNames) {
       const permId = permMap[permName];
       if (!permId) { warn(`Permission "${permName}" not found — skipping`); missing++; continue; }
+      desiredPermIds.add(permId);
+    }
 
-      const exists = await RolePermission.findOne({ role_id: roleId, permission_id: permId });
-      if (exists) {
-        skipped++;
-      } else {
+    // Get current permission links for this role
+    const currentLinks = await RolePermission.find({ role_id: roleId });
+    const currentPermIds = new Set(currentLinks.map(l => l.permission_id.toString()));
+
+    // Add missing links
+    for (const permId of desiredPermIds) {
+      if (!currentPermIds.has(permId)) {
         await RolePermission.create({ role_id: roleId, permission_id: permId });
         added++;
+      } else {
+        skipped++;
+      }
+    }
+
+    // Remove stale links (permissions no longer in the desired set)
+    for (const link of currentLinks) {
+      if (!desiredPermIds.has(link.permission_id.toString())) {
+        await RolePermission.deleteOne({ _id: link._id });
+        removed++;
       }
     }
   }
-  console.log(`      ${added} links added, ${skipped} already existed${missing ? `, ${missing} skipped (missing ref)` : ''}.`);
+  console.log(`      ${added} links added, ${removed} stale links removed, ${skipped} already correct${missing ? `, ${missing} skipped (missing ref)` : ''}.`);
 }
 
 async function ensureAdminUser() {
@@ -267,6 +287,39 @@ async function ensureAdminUser() {
   warn('IMPORTANT: Change the default admin password after first login!');
 }
 
+// ── Roles to remove from the DB ──────────────────────────────────────────────
+// Add role names here when they are retired. The function removes the role
+// and all its role-permission links. Users assigned to the role are NOT
+// deleted — their role_id is cleared so they become role-less.
+const ROLES_TO_REMOVE = ['Superuser'];
+
+async function removeRetiredRoles() {
+  console.log('\n[5/5] Removing retired roles…');
+  let removed = 0;
+
+  for (const roleName of ROLES_TO_REMOVE) {
+    const role = await Role.findOne({ role_name: roleName });
+    if (!role) {
+      console.log(`  – "${roleName}" not found in DB (already removed or never existed)`);
+      continue;
+    }
+
+    // Remove all role-permission links for this role
+    const rpResult = await RolePermission.deleteMany({ role_id: role._id });
+    // Clear role_id on any users who had this role
+    await User.updateMany({ role_id: role._id }, { $unset: { role_id: '' } });
+    // Delete the role itself
+    await Role.deleteOne({ _id: role._id });
+
+    log(`Removed role "${roleName}" (${rpResult.deletedCount} permission links cleared)`);
+    removed++;
+  }
+
+  if (removed === 0) {
+    console.log('      Nothing to remove.');
+  }
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 async function migrate() {
@@ -282,9 +335,10 @@ async function migrate() {
   await upsertRoles();
   await upsertRolePermissions();
   await ensureAdminUser();
+  await removeRetiredRoles();
 
   console.log('\n═══════════════════════════════════════════════════');
-  console.log('  Migration complete. No existing data was touched.');
+  console.log('  Migration complete.');
   console.log('═══════════════════════════════════════════════════\n');
 
   await mongoose.connection.close();

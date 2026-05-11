@@ -2,11 +2,40 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
 const dbAdapter = require('../dbAdapter');
 const { authenticate, getUserPermissions, generateToken, JWT_SECRET } = require('../auth');
 const { sendPasswordResetEmail } = require('../email');
 
 const router = express.Router();
+
+// Rate limiter: max 10 login attempts per username per 15 minutes
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Key by username so different users on the same network don't share a limit
+  keyGenerator: (req) => {
+    const username = (req.body?.username || '').toLowerCase().trim();
+    return username || req.ip; // fall back to IP if no username in body
+  },
+  message: { error: 'Too many login attempts. Please try again in 15 minutes.' }
+});
+
+// Rate limiter: max 3 password reset requests per email address per hour
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Key by email so User A exhausting resets doesn't block User B
+  keyGenerator: (req) => {
+    const email = (req.body?.email || '').toLowerCase().trim();
+    return email || req.ip; // fall back to IP if no email in body
+  },
+  message: { error: 'Too many password reset requests. You can only request 3 resets per hour.' }
+});
 
 // In-memory anonymous reset code storage
 // Structure: Map<code, { emailHash, expires, attempts }>
@@ -15,14 +44,11 @@ const CODE_EXPIRY_MS = 15 * 60 * 1000; // 15 minutes
 const MAX_ATTEMPTS = 3;
 const RESET_TOKEN_EXPIRY = '10m'; // 10 minutes
 
-// Generate 8-character alphanumeric code
+// Generate 8-character alphanumeric code using cryptographically secure randomness
 function generateResetCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Excluded confusing chars: I, O, 0, 1
-  let code = '';
-  for (let i = 0; i < 8; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return code;
+  const bytes = crypto.randomBytes(8);
+  return Array.from(bytes).map(b => chars[b % chars.length]).join('');
 }
 
 // Hash email for anonymous storage
@@ -31,7 +57,7 @@ function hashEmail(email) {
 }
 
 // Login
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   const { username, password } = req.body;
   
   if (!username || !password) {
@@ -132,7 +158,7 @@ router.post('/change-password', authenticate, async (req, res) => {
 });
 
 // Forgot password - Step 1: Send reset code
-router.post('/forgot-password', async (req, res) => {
+router.post('/forgot-password', forgotPasswordLimiter, async (req, res) => {
   const { email } = req.body;
   
   if (!email) {

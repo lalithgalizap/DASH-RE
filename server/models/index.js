@@ -12,6 +12,7 @@ const Product = require('./Product');
 const PerformanceReport = require('./PerformanceReport');
 const WeeklyUpdate = require('./WeeklyUpdate');
 const ExportSchedule = require('./ExportSchedule');
+const AppSettings = require('./AppSettings');
 
 module.exports = {
   Project,
@@ -27,5 +28,6 @@ module.exports = {
   Product,
   PerformanceReport,
   WeeklyUpdate,
-  ExportSchedule
+  ExportSchedule,
+  AppSettings
 };

@@ -1,6 +1,6 @@
 const express = require('express');
 const dbAdapter = require('../dbAdapter');
-const { authenticate } = require('../auth');
+const { authenticate, requireAdmin } = require('../auth');
 const { MetricSnapshot } = require('../models');
 const fs   = require('fs');
 const path = require('path');
@@ -101,7 +101,7 @@ router.get('/portfolio-metrics', authenticate, async (req, res) => {
 });
 
 // Get metrics
-router.get('/', async (req, res) => {
+router.get('/', authenticate, async (req, res) => {
   try {
     const projects = await dbAdapter.getAllProjects({});
     
@@ -140,7 +140,7 @@ router.get('/', async (req, res) => {
 });
 
 // Get events
-router.get('/events', async (req, res) => {
+router.get('/events', authenticate, async (req, res) => {
   try {
     const events = await dbAdapter.getAllEvents();
     res.json(events.slice(0, 10));
@@ -150,7 +150,7 @@ router.get('/events', async (req, res) => {
 });
 
 // Create event
-router.post('/events', async (req, res) => {
+router.post('/events', authenticate, async (req, res) => {
   try {
     const result = await dbAdapter.createEvent(req.body);
     res.json(result);
@@ -299,7 +299,7 @@ router.get('/history', authenticate, async (req, res) => {
 });
 
 // Trigger manual snapshot (admin only)
-router.post('/snapshot', authenticate, async (req, res) => {
+router.post('/snapshot', authenticate, requireAdmin, async (req, res) => {
   try {
     const { triggerManualSnapshot } = require('../jobs/metricSnapshotJob');
     const snapshot = await triggerManualSnapshot();
@@ -314,6 +314,119 @@ router.post('/snapshot', authenticate, async (req, res) => {
     });
   } catch (err) {
     console.error('Error creating manual snapshot:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/metrics/snapshot-schedule — get current schedule settings
+router.get('/snapshot-schedule', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { AppSettings } = require('../models');
+    const { getJobStatus } = require('../jobs/metricSnapshotJob');
+
+    const settings = await AppSettings.findOne({ key: 'global' }).lean();
+    const jobStatus = getJobStatus();
+
+    const schedule = settings?.snapshotSchedule || {};
+    res.json({
+      cronExpression: schedule.cronExpression || '0 0 * * 6',
+      label:          schedule.label          || 'Every Friday at 6:00 PM CST',
+      enabled:        schedule.enabled        !== false,
+      jobRunning:     jobStatus.running,
+    });
+  } catch (err) {
+    console.error('Error fetching snapshot schedule:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/metrics/snapshot-schedule — update schedule and reschedule live
+router.put('/snapshot-schedule', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { cronExpression, label, enabled } = req.body;
+    const { AppSettings } = require('../models');
+    const { rescheduleJob, stopJob, getJobStatus } = require('../jobs/metricSnapshotJob');
+    const cron = require('node-cron');
+
+    if (cronExpression && !cron.validate(cronExpression)) {
+      return res.status(400).json({ error: `Invalid cron expression: "${cronExpression}"` });
+    }
+
+    // Upsert the settings document
+    await AppSettings.findOneAndUpdate(
+      { key: 'global' },
+      {
+        $set: {
+          'snapshotSchedule.cronExpression': cronExpression || '0 0 * * 6',
+          'snapshotSchedule.label':          label          || cronExpression || 'Custom schedule',
+          'snapshotSchedule.enabled':        enabled !== false,
+        }
+      },
+      { upsert: true, new: true }
+    );
+
+    // Apply live
+    if (enabled === false) {
+      stopJob();
+    } else {
+      rescheduleJob(cronExpression || '0 0 * * 6');
+    }
+
+    const jobStatus = getJobStatus();
+    res.json({
+      message: 'Snapshot schedule updated',
+      cronExpression: cronExpression || '0 0 * * 6',
+      label: label || cronExpression,
+      enabled: enabled !== false,
+      jobRunning: jobStatus.running,
+    });
+  } catch (err) {
+    console.error('Error updating snapshot schedule:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/metrics/snapshots — list all stored snapshot weeks
+router.get('/snapshots', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const snapshots = await MetricSnapshot.find({})
+      .sort({ weekEnding: -1 })
+      .select('weekEnding year weekNumber metrics projectCount activeProjectCount createdAt')
+      .lean();
+
+    res.json(snapshots.map(s => ({
+      id:                  s._id,
+      weekEnding:          s.weekEnding.toISOString().split('T')[0],
+      year:                s.year,
+      weekNumber:          s.weekNumber,
+      projectCount:        s.projectCount,
+      activeProjectCount:  s.activeProjectCount,
+      createdAt:           s.createdAt,
+      metrics: {
+        overdueMilestones:  s.metrics.overdueMilestonesTotal,
+        upcomingMilestones: s.metrics.upcomingMilestonesTotal,
+        openCriticalRisks:  s.metrics.openCriticalRisksTotal,
+        openCriticalIssues: s.metrics.openCriticalIssuesTotal,
+        openEscalations:    s.metrics.openEscalationsTotal,
+        openDependencies:   s.metrics.openDependenciesTotal,
+      }
+    })));
+  } catch (err) {
+    console.error('Error fetching snapshots:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/metrics/snapshots/:id — delete a single snapshot
+router.delete('/snapshots/:id', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const deleted = await MetricSnapshot.findByIdAndDelete(req.params.id);
+    if (!deleted) {
+      return res.status(404).json({ error: 'Snapshot not found' });
+    }
+    res.json({ success: true, message: 'Snapshot deleted' });
+  } catch (err) {
+    console.error('Error deleting snapshot:', err);
     res.status(500).json({ error: err.message });
   }
 });

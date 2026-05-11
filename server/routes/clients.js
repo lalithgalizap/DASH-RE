@@ -4,8 +4,8 @@ const { authenticate, requirePermission } = require('../auth');
 
 const router = express.Router();
 
-// GET all clients (public read)
-router.get('/', async (req, res) => {
+// GET all clients (authenticated read)
+router.get('/', authenticate, async (req, res) => {
   try {
     const clients = await dbAdapter.getAllClients();
     res.json(clients);

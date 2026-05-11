@@ -8,6 +8,21 @@ const { authenticate, requirePermission } = require('../auth');
 
 const router = express.Router();
 
+// ─── Path traversal guard ─────────────────────────────────────────────────────
+// Resolves user-supplied path segments against the closure-documents base dir
+// and rejects anything that escapes it (e.g. ../../.env attacks).
+const CLOSURE_DOCS_BASE = path.resolve(__dirname, '..', '..', 'project-closure-documents');
+
+function safeResolvePath(...segments) {
+  const resolved = path.resolve(CLOSURE_DOCS_BASE, ...segments);
+  // Must start with base + separator to prevent prefix-match bypass
+  if (!resolved.startsWith(CLOSURE_DOCS_BASE + path.sep) && resolved !== CLOSURE_DOCS_BASE) {
+    return null;
+  }
+  return resolved;
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 // Lazy-load the portfolio cache to avoid circular-require issues
 const getPortfolioCache = () => require('./metrics').portfolioCache;
 
@@ -78,7 +93,10 @@ const projectDocUpload = multer({
 // Configure multer for closure documents
 const closureDocStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const dir = path.join(__dirname, '..', '..', 'project-closure-documents', req.params.id);
+    const dir = safeResolvePath(req.params.id);
+    if (!dir) {
+      return cb(new Error('Invalid project ID'));
+    }
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
@@ -91,7 +109,7 @@ const closureDocStorage = multer.diskStorage({
 const closureDocUpload = multer({ storage: closureDocStorage });
 
 // GET all projects
-router.get('/', async (req, res) => {
+router.get('/', authenticate, async (req, res) => {
   try {
     const { priority, stage, status, client } = req.query;
     const projects = await dbAdapter.getAllProjects({ priority, stage, status, client });
@@ -112,7 +130,7 @@ router.get('/', async (req, res) => {
 });
 
 // GET single project
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticate, async (req, res) => {
   try {
     const project = await dbAdapter.getProjectById(req.params.id);
     res.json(project);
@@ -208,8 +226,8 @@ router.delete('/:id', authenticate, requirePermission('projects', 'add_delete'),
         fs.unlinkSync(excelFilePath);
       }
       
-      const closureDocsPath = path.join(__dirname, '..', '..', 'project-closure-documents', req.params.id);
-      if (fs.existsSync(closureDocsPath)) {
+      const closureDocsPath = safeResolvePath(req.params.id);
+      if (closureDocsPath && fs.existsSync(closureDocsPath)) {
         fs.rmSync(closureDocsPath, { recursive: true, force: true });
       }
     }
@@ -268,7 +286,10 @@ router.post('/upload-document', authenticate, requirePermission('projects', 'add
 // Get closure documents list
 router.get('/:id/closure-documents', authenticate, async (req, res) => {
   try {
-    const dir = path.join(__dirname, '..', '..', 'project-closure-documents', req.params.id);
+    const dir = safeResolvePath(req.params.id);
+    if (!dir) {
+      return res.status(400).json({ error: 'Invalid project ID' });
+    }
     if (!fs.existsSync(dir)) {
       return res.json({ files: [] });
     }
@@ -303,7 +324,10 @@ router.post('/:id/closure-documents', authenticate, requirePermission('projects'
 // Download closure document
 router.get('/:id/closure-documents/download/:filename', authenticate, async (req, res) => {
   try {
-    const filePath = path.join(__dirname, '..', '..', 'project-closure-documents', req.params.id, req.params.filename);
+    const filePath = safeResolvePath(req.params.id, req.params.filename);
+    if (!filePath) {
+      return res.status(400).json({ error: 'Invalid file path' });
+    }
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ error: 'File not found' });
     }
@@ -317,7 +341,10 @@ router.get('/:id/closure-documents/download/:filename', authenticate, async (req
 // Delete closure document
 router.delete('/:id/closure-documents/:filename', authenticate, requirePermission('projects', 'add_delete'), async (req, res) => {
   try {
-    const filePath = path.join(__dirname, '..', '..', 'project-closure-documents', req.params.id, req.params.filename);
+    const filePath = safeResolvePath(req.params.id, req.params.filename);
+    if (!filePath) {
+      return res.status(400).json({ error: 'Invalid file path' });
+    }
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ error: 'File not found' });
     }

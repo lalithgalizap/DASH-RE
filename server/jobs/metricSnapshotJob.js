@@ -1,5 +1,5 @@
 const cron = require('node-cron');
-const { MetricSnapshot } = require('../models');
+const { MetricSnapshot, AppSettings } = require('../models');
 const dbAdapter = require('../dbAdapter');
 
 // Use the shared utility — same logic as the portfolio-metrics endpoint
@@ -35,10 +35,8 @@ const normalizeClient = (project) => {
 // Calculate aggregate metrics across all projects with per-project breakdown
 const calculateAggregateMetrics = async () => {
   try {
-    // Get all projects
     const projects = await dbAdapter.getAllProjects({});
 
-    // Filter active projects (not completed or cancelled)
     const activeProjects = projects.filter(p => {
       const status = (p.status || '').toLowerCase();
       return status !== 'completed' && status !== 'cancelled';
@@ -46,7 +44,6 @@ const calculateAggregateMetrics = async () => {
 
     console.log(`[MetricSnapshot] Processing ${activeProjects.length} active projects out of ${projects.length} total`);
 
-    // Calculate totals and per-project breakdown
     let totals = {
       overdueMilestonesTotal: 0,
       upcomingMilestonesTotal: 0,
@@ -58,12 +55,10 @@ const calculateAggregateMetrics = async () => {
 
     const projectMetrics = [];
 
-    // Process each active project
     for (const project of activeProjects) {
       const documents = loadProjectDocuments(project.name);
       const metrics = calculateProjectMetrics(documents);
 
-      // Only include projects that have metrics > 0 for at least one category
       const hasMetrics = Object.values(metrics).some(v => v > 0);
 
       if (hasMetrics) {
@@ -89,7 +84,6 @@ const calculateAggregateMetrics = async () => {
       totals.openDependenciesTotal += metrics.openDependencies;
     }
 
-    // Sort by project name
     projectMetrics.sort((a, b) => a.projectName.localeCompare(b.projectName));
 
     return {
@@ -109,35 +103,29 @@ const createWeeklySnapshot = async () => {
   try {
     console.log('[MetricSnapshot] Starting weekly snapshot creation...');
 
-    // Get current date in CST
     const now = new Date();
-    const cstOffset = -6; // CST is UTC-6 (ignoring DST for simplicity)
+    const cstOffset = -6;
     const cstDate = new Date(now.getTime() + (cstOffset * 60 * 60 * 1000));
 
-    // Get week ending date (Friday of current week)
-    const dayOfWeek = cstDate.getDay(); // 0 = Sunday, 5 = Friday
-    const daysUntilFriday = (5 - dayOfWeek + 7) % 7 || 7; // Days until next Friday (or 7 if today is Friday)
+    const dayOfWeek = cstDate.getDay();
+    const daysUntilFriday = (5 - dayOfWeek + 7) % 7 || 7;
     const weekEnding = new Date(cstDate);
     weekEnding.setDate(cstDate.getDate() + daysUntilFriday);
     weekEnding.setHours(0, 0, 0, 0);
 
-    // Calculate ISO week number
     const year = weekEnding.getFullYear();
     const weekNumber = getISOWeek(weekEnding);
 
     console.log(`[MetricSnapshot] Creating snapshot for week ending ${weekEnding.toISOString().split('T')[0]} (Week ${weekNumber}, ${year})`);
 
-    // Check if snapshot already exists for this week
     const existingSnapshot = await MetricSnapshot.findOne({ weekEnding });
     if (existingSnapshot) {
       console.log('[MetricSnapshot] Snapshot already exists for this week, skipping...');
       return existingSnapshot;
     }
 
-    // Calculate metrics
     const { metrics, projectCount, activeProjectCount, projectMetrics } = await calculateAggregateMetrics();
 
-    // Create new snapshot
     const snapshot = new MetricSnapshot({
       weekEnding,
       year,
@@ -172,20 +160,45 @@ const getISOWeek = (date) => {
   return Math.ceil((((tmpDate - yearStart) / 86400000) + 1) / 7);
 };
 
-// Initialize the scheduled job
-const initializeMetricSnapshotJob = () => {
-  // Schedule: Every Friday at 6:00 PM CST
-  // CST is UTC-6, so 6 PM CST = 00:00 UTC Saturday
-  // Cron format: minute hour day month day-of-week
-  // Run at 00:00 UTC on Saturday (Friday 6 PM CST)
+// ── Live-reschedulable job holder ─────────────────────────────────────────────
+let _currentJob = null;
+let _currentCron = null;
 
-  console.log('[MetricSnapshot] Initializing scheduled job...');
+// Get the current schedule from DB (falls back to default if not set)
+const getScheduleFromDB = async () => {
+  try {
+    const settings = await AppSettings.findOne({ key: 'global' }).lean();
+    if (settings?.snapshotSchedule?.cronExpression) {
+      return {
+        cronExpression: settings.snapshotSchedule.cronExpression,
+        label: settings.snapshotSchedule.label || settings.snapshotSchedule.cronExpression,
+        enabled: settings.snapshotSchedule.enabled !== false,
+      };
+    }
+  } catch (err) {
+    console.warn('[MetricSnapshot] Could not read schedule from DB, using default:', err.message);
+  }
+  return {
+    cronExpression: '0 0 * * 6',
+    label: 'Every Friday at 6:00 PM CST',
+    enabled: true,
+  };
+};
 
-  // For testing, you can use '*/5 * * * *' to run every 5 minutes
-  // Production: '0 0 * * 6' = Saturday at 00:00 UTC (Friday 6 PM CST)
-  const schedule = process.env.NODE_ENV === 'production' ? '0 0 * * 6' : '0 0 * * 6';
+// Start (or restart) the cron job with a given expression
+const startJob = (cronExpression) => {
+  if (_currentJob) {
+    _currentJob.stop();
+    _currentJob = null;
+  }
 
-  const job = cron.schedule(schedule, async () => {
+  if (!cron.validate(cronExpression)) {
+    console.error(`[MetricSnapshot] Invalid cron expression: "${cronExpression}" — job not started`);
+    return;
+  }
+
+  _currentCron = cronExpression;
+  _currentJob = cron.schedule(cronExpression, async () => {
     console.log('[MetricSnapshot] Scheduled job triggered at:', new Date().toISOString());
     try {
       await createWeeklySnapshot();
@@ -194,13 +207,51 @@ const initializeMetricSnapshotJob = () => {
     }
   }, {
     scheduled: true,
-    timezone: 'America/Chicago' // CST timezone
+    timezone: 'America/Chicago'
   });
 
-  console.log('[MetricSnapshot] Job scheduled for Fridays at 6:00 PM CST');
-
-  return job;
+  console.log(`[MetricSnapshot] Job scheduled with cron: "${cronExpression}"`);
 };
+
+// Initialize the scheduled job — reads schedule from DB on startup
+const initializeMetricSnapshotJob = async () => {
+  console.log('[MetricSnapshot] Initializing scheduled job...');
+  const { cronExpression, label, enabled } = await getScheduleFromDB();
+
+  if (!enabled) {
+    console.log('[MetricSnapshot] Job is disabled in settings — not starting');
+    return null;
+  }
+
+  startJob(cronExpression);
+  console.log(`[MetricSnapshot] Job ready — ${label}`);
+  return _currentJob;
+};
+
+// Reschedule the job live (called after saving new schedule via API)
+const rescheduleJob = async (cronExpression) => {
+  if (!cron.validate(cronExpression)) {
+    throw new Error(`Invalid cron expression: "${cronExpression}"`);
+  }
+  startJob(cronExpression);
+  console.log(`[MetricSnapshot] Job rescheduled to: "${cronExpression}"`);
+};
+
+// Stop the job (when disabled)
+const stopJob = () => {
+  if (_currentJob) {
+    _currentJob.stop();
+    _currentJob = null;
+    _currentCron = null;
+    console.log('[MetricSnapshot] Job stopped');
+  }
+};
+
+// Get current job status
+const getJobStatus = () => ({
+  running: !!_currentJob,
+  cronExpression: _currentCron,
+});
 
 // Manual trigger function (for testing or admin use)
 const triggerManualSnapshot = async () => {
@@ -211,5 +262,8 @@ const triggerManualSnapshot = async () => {
 module.exports = {
   initializeMetricSnapshotJob,
   triggerManualSnapshot,
-  createWeeklySnapshot
+  createWeeklySnapshot,
+  rescheduleJob,
+  stopJob,
+  getJobStatus,
 };

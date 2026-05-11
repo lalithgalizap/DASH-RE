@@ -100,9 +100,9 @@ export const AuthProvider = ({ children }) => {
   };
 
   const canAddClients = () => {
-    return hasPermission('clients', 'manage') ||
-           user?.role === 'Admin' || user?.role_name === 'Admin' ||
-           user?.role === 'Superuser' || user?.role_name === 'Superuser';
+    if (!user || !user.permissions) return false;
+    return user.permissions.includes('add_clients_to_project') ||
+           user?.role === 'Admin' || user?.role_name === 'Admin';
   };
 
   const canManageWeeklyUpdates = () => {

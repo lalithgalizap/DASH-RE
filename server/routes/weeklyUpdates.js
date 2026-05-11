@@ -9,7 +9,7 @@ const { sendWeeklyUpdateReminder } = require('../email');
 router.get('/', authenticate, async (req, res) => {
   try {
     const user = await dbAdapter.getUserById(req.user.id);
-    const isAdmin = user.role_name === 'Admin' || user.role_name === 'Superuser';
+    const isAdmin = user.role_name === 'Admin';
     const isCSP = user.role_name === 'CSP';
     const isManager = user.role_name === 'Manager';
     
@@ -80,7 +80,7 @@ router.get('/', authenticate, async (req, res) => {
 router.get('/resources', authenticate, async (req, res) => {
   try {
     const user = await dbAdapter.getUserById(req.user.id);
-    const isAdmin = user.role_name === 'Admin' || user.role_name === 'Superuser';
+    const isAdmin = user.role_name === 'Admin';
     const isCSP = user.role_name === 'CSP';
     const isManager = user.role_name === 'Manager';
     const hasGlobalPermission = user.permissions?.includes('view_global_weekly_updates');
@@ -140,7 +140,7 @@ router.get('/:id', authenticate, async (req, res) => {
     
     // Check access permissions
     const user = await dbAdapter.getUserById(req.user.id);
-    const isAdmin = user.role_name === 'Admin' || user.role_name === 'Superuser';
+    const isAdmin = user.role_name === 'Admin';
     const isCSP = user.role_name === 'CSP';
     const isManager = user.role_name === 'Manager';
     const hasGlobalPermission = user.permissions?.includes('view_global_weekly_updates');
@@ -175,7 +175,7 @@ router.post('/', authenticate, async (req, res) => {
     // Check if user can create for self (anyone can create for self)
     // Or has manage permission
     const hasManagePermission = user.permissions?.includes('manage_weekly_updates');
-    const isAdmin = user.role_name === 'Admin' || user.role_name === 'Superuser';
+    const isAdmin = user.role_name === 'Admin';
     const isCSP = user.role_name === 'CSP';
     
     // Check for duplicate week
@@ -217,7 +217,7 @@ router.put('/:id', authenticate, async (req, res) => {
     }
     
     // Check permissions
-    const isAdmin = user.role_name === 'Admin' || user.role_name === 'Superuser';
+    const isAdmin = user.role_name === 'Admin';
     const isCSP = user.role_name === 'CSP';
     const hasManagePermission = user.permissions?.includes('manage_weekly_updates');
     const isOwner = update.resource_id.toString() === user.id;
@@ -254,7 +254,7 @@ router.delete('/:id', authenticate, async (req, res) => {
     }
     
     // Check permissions
-    const isAdmin = user.role_name === 'Admin' || user.role_name === 'Superuser';
+    const isAdmin = user.role_name === 'Admin';
     const isCSP = user.role_name === 'CSP';
     const hasManagePermission = user.permissions?.includes('manage_weekly_updates');
     const isOwner = update.resource_id.toString() === user.id;
@@ -277,7 +277,7 @@ router.delete('/:id', authenticate, async (req, res) => {
 router.get('/resource/:resourceId', authenticate, async (req, res) => {
   try {
     const user = await dbAdapter.getUserById(req.user.id);
-    const isAdmin = user.role_name === 'Admin' || user.role_name === 'Superuser';
+    const isAdmin = user.role_name === 'Admin';
     const isCSP = user.role_name === 'CSP';
     const isManager = user.role_name === 'Manager';
     const hasGlobalPermission = user.permissions?.includes('view_global_weekly_updates');
@@ -317,7 +317,7 @@ router.get('/resource/:resourceId', authenticate, async (req, res) => {
 router.post('/remind/:resourceId', authenticate, async (req, res) => {
   try {
     const user = await dbAdapter.getUserById(req.user.id);
-    const isAdmin = user.role_name === 'Admin' || user.role_name === 'Superuser';
+    const isAdmin = user.role_name === 'Admin';
     const isCSP = user.role_name === 'CSP';
     const isManager = user.role_name === 'Manager';
     const resourceId = req.params.resourceId;

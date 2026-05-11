@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Plus, Trash2, Building2, Search, Package, FolderKanban, ChevronRight, X, Layers } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import './Clients.css';
 
 function Clients() {
+  const { hasPermission } = useAuth();
+  const canManageClients  = hasPermission('clients', 'manage');
+  const canManageProducts = hasPermission('products', 'manage');
   const [activeTab, setActiveTab] = useState('clients');
   const [clients, setClients] = useState([]);
   const [products, setProducts] = useState([]);
@@ -216,9 +220,11 @@ function Clients() {
         </button>
       </div>
 
-      {/* Add Form */}
+      {/* Add Form — only shown to users with manage permissions */}
+      {(canManageClients || canManageProducts) && (
       <div className="cl-form-card">
         {activeTab === 'clients' ? (
+          canManageClients ? (
           <form onSubmit={handleAddClient} className="cl-form-row">
             <input
               type="text"
@@ -232,7 +238,9 @@ function Clients() {
               {loading ? 'Adding...' : 'Add Client'}
             </button>
           </form>
+          ) : null
         ) : (
+          canManageProducts ? (
           <form onSubmit={handleAddProduct} className="cl-form-row">
             <select
               value={selectedClientForProduct}
@@ -265,6 +273,7 @@ function Clients() {
               {loading ? 'Adding...' : 'Add Product'}
             </button>
           </form>
+          ) : null
         )}
         {error && (
           <div className="cl-error">
@@ -272,6 +281,7 @@ function Clients() {
           </div>
         )}
       </div>
+      )}
 
       {/* Search */}
       <div className="cl-search-bar">
@@ -335,6 +345,7 @@ function Clients() {
                         >
                           <ChevronRight size={16} />
                         </button>
+                        {canManageClients && (
                         <button
                           className="cl-delete-btn"
                           onClick={e => { e.stopPropagation(); handleDeleteClient(clientId); }}
@@ -342,6 +353,7 @@ function Clients() {
                         >
                           <Trash2 size={14} />
                         </button>
+                        )}
                       </div>
                     </div>
                   );
@@ -376,6 +388,7 @@ function Clients() {
                           </div>
                         </div>
                       </div>
+                      {canManageProducts && (
                       <button
                         className="cl-delete-btn"
                         onClick={() => handleDeleteProduct(productId)}
@@ -383,6 +396,7 @@ function Clients() {
                       >
                         <Trash2 size={14} />
                       </button>
+                      )}
                     </div>
                   );
                 })}

@@ -170,13 +170,19 @@ const Login = () => {
 
   return (
     <div className="login-page">
-      <div className="login-container">
+
+      {/* ── Left panel — image ── */}
+      <div className="login-image-panel">
+        <img src="/LOGINPAGE.png" alt="PMO Dashboard" />
+      </div>
+
+      {/* ── Right panel — form ── */}
+      <div className="login-form-panel">
+
+        {/* Logo row */}
         <div className="login-header">
-          <div className="login-logo">
-            <Lock size={32} />
-          </div>
-          <h1>PMO Dashboard</h1>
-          <p>Sign in to your account</p>
+          <h1>Welcome back</h1>
+          <p>Sign in to your PMO Dashboard account</p>
         </div>
 
         {error && (
@@ -188,7 +194,7 @@ const Login = () => {
         <form onSubmit={handleSubmit} className="login-form">
           <div className="form-group">
             <label htmlFor="username">
-              <User size={16} />
+              <User size={14} />
               Username
             </label>
             <input
@@ -203,7 +209,7 @@ const Login = () => {
 
           <div className="form-group">
             <label htmlFor="password">
-              <Lock size={16} />
+              <Lock size={14} />
               Password
             </label>
             <div className="password-input">
@@ -219,7 +225,7 @@ const Login = () => {
                 className="toggle-password"
                 onClick={() => setShowPassword(!showPassword)}
               >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
           </div>
@@ -229,16 +235,16 @@ const Login = () => {
             className="login-button"
             disabled={loading}
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? 'Signing in…' : 'Sign In'}
           </button>
 
           <div className="login-help">
-            <p>Having Trouble SignIng In Please Contact Daksh Hooda (daksh.hooda@zapcg.com)</p>
+            <p>Having trouble? Contact Daksh Hooda at daksh.hooda@zapcg.com</p>
           </div>
 
           <div className="forgot-password-link">
-            <button 
-              type="button" 
+            <button
+              type="button"
               className="link-button"
               onClick={() => setShowForgotModal(true)}
             >

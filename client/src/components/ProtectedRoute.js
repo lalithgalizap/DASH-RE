@@ -42,9 +42,9 @@ export const ProtectedRoute = ({ children, requirePermission, resource, action, 
   return children;
 };
 
-// Restricts a route to Admin or CSP roles only
+// Restricts a route to Admin, CSP, or users with client/product management permissions
 export const AdminOrCSPRoute = ({ children }) => {
-  const { isAuthenticated, loading, isAdmin, isCSP } = useAuth();
+  const { isAuthenticated, loading, isAdmin, isCSP, hasPermission } = useAuth();
 
   if (loading) {
     return (
@@ -59,7 +59,7 @@ export const AdminOrCSPRoute = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (!isAdmin() && !isCSP()) {
+  if (!isAdmin() && !isCSP() && !hasPermission('clients', 'manage') && !hasPermission('products', 'manage') && !hasPermission('clients', 'view')) {
     return (
       <div className="access-denied">
         <h2>Access Denied</h2>

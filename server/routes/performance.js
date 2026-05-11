@@ -15,29 +15,51 @@ const upload = multer({ dest: 'tmp/' });
 // Helper: CSP or Admin only
 const requireCSPOrAdmin = (req, res, next) => {
   const role = req.user?.role_name;
-  if (role === 'CSP' || role === 'Admin' || role === 'Superuser') {
+  if (role === 'CSP' || role === 'Admin') {
     return next();
   }
   return res.status(403).json({ error: 'CSP or Admin access required' });
 };
 
+// Helper: returns true if the user can view all performance data globally
+// (Admin, CSP, or any role with view_performance permission)
+// NOTE: user must have permissions array populated via getUserPermissions()
+const canViewAllPerformance = (user) => {
+  return user.role_name === 'Admin' ||
+         user.role_name === 'CSP' ||
+         (user.permissions || []).includes('view_performance') ||
+         (user.permissions || []).includes('can_view_global_performance');
+};
+
+// Fetch user + permissions in one call — used by all performance endpoints
+const getUserWithPermissions = async (userId) => {
+  const { getUserPermissions } = require('../auth');
+  const [user, permissions] = await Promise.all([
+    require('../dbAdapter').getUserById(userId),
+    getUserPermissions(userId)
+  ]);
+  if (!user) return null;
+  user.permissions = permissions;
+  return user;
+};
+
 // GET /api/performance/clients — returns clients that have resources assigned
 router.get('/clients', authenticate, async (req, res) => {
   try {
-    const user = await dbAdapter.getUserById(req.user.id);
+    const user = await getUserWithPermissions(req.user.id);
     const allClients = await dbAdapter.getAllClients();
     const allUsers = await dbAdapter.getAllUsers();
     
-    const isAdmin = user.role_name === 'Admin' || user.role_name === 'Superuser';
+    const isAdmin = user.role_name === 'Admin';
     const isCSP = user.role_name === 'CSP';
     const hasGlobalPerformance = user.permissions?.includes('can_view_global_performance');
-    const canViewAll = isAdmin || isCSP || hasGlobalPerformance;
+    const canViewAll = canViewAllPerformance(user);
     
     // Filter to only Manager/Resource users that have a client assigned
     const mrUsers = allUsers.filter(u => u.role_name === 'Manager' || u.role_name === 'Resource');
     
     if (canViewAll) {
-      // Admin/CSP/Global view sees all clients that have at least one Manager or Resource assigned
+      // Admin/CSP/SLTs/Global view sees all clients that have at least one Manager or Resource assigned
       const clientIds = new Set(mrUsers.filter(u => u.client_id).map(u => u.client_id));
       const clients = allClients.filter(c => clientIds.has(c.id));
       return res.json(clients);
@@ -67,15 +89,15 @@ router.get('/clients', authenticate, async (req, res) => {
 router.get('/metrics', authenticate, async (req, res) => {
   try {
     const { client_id } = req.query;
-    const user       = await dbAdapter.getUserById(req.user.id);
+    const user       = await getUserWithPermissions(req.user.id);
     const allClients = await dbAdapter.getAllClients();
     const allUsers   = await dbAdapter.getAllUsers();
 
-    const isAdmin    = user.role_name === 'Admin' || user.role_name === 'Superuser';
+    const isAdmin    = user.role_name === 'Admin';
     const isCSP      = user.role_name === 'CSP';
     const isManager  = user.role_name === 'Manager';
     const hasGlobalPerformance = user.permissions?.includes('can_view_global_performance');
-    const canViewAll = isAdmin || isCSP || hasGlobalPerformance;
+    const canViewAll = canViewAllPerformance(user);
 
     // ── RBAC: determine which users are in scope ──────────────────────────────
     let relevantUsers = allUsers.filter(u => u.role_name === 'Manager' || u.role_name === 'Resource');
@@ -219,12 +241,12 @@ router.get('/resources', authenticate, async (req, res) => {
     const quarters = req.query.quarter ? (Array.isArray(req.query.quarter) ? req.query.quarter : [req.query.quarter]) : [];
     const years = req.query.year ? (Array.isArray(req.query.year) ? req.query.year : [req.query.year]) : [];
     
-    const user = await dbAdapter.getUserById(req.user.id);
-    const isAdmin = user.role_name === 'Admin' || user.role_name === 'Superuser';
+    const user = await getUserWithPermissions(req.user.id);
+    const isAdmin = user.role_name === 'Admin';
     const isCSP = user.role_name === 'CSP';
     const isManager = user.role_name === 'Manager';
     const hasGlobalPerformance = user.permissions?.includes('can_view_global_performance');
-    const canViewAll = isAdmin || isCSP || hasGlobalPerformance;
+    const canViewAll = canViewAllPerformance(user);
     
     let resources;
     if (client_id) {
@@ -250,9 +272,9 @@ router.get('/resources', authenticate, async (req, res) => {
     if (isManager && !canViewAll) {
       // Manager only sees resources assigned to them — NOT themselves
       resources = resources.filter(r => r.manager_id === user.id);
-    } else if (!canViewAll) {
-      // Resource role — no access to performance page
-      return res.status(403).json({ error: 'Resources do not have access to performance data.' });
+    } else if (!canViewAll && !isManager) {
+      // Roles with no performance access (e.g. Resource) — blocked
+      return res.status(403).json({ error: 'Access denied to performance data.' });
     }
 
     // Only show managers/resources who have a product assigned
@@ -390,19 +412,19 @@ router.get('/reports', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'resource_id is required' });
     }
     
-    const user = await dbAdapter.getUserById(req.user.id);
+    const user = await getUserWithPermissions(req.user.id);
     const resource = await dbAdapter.getUserById(resource_id);
     
     if (!resource) {
       return res.status(404).json({ error: 'Resource not found' });
     }
     
-    const isAdmin = user.role_name === 'Admin' || user.role_name === 'Superuser';
+    const isAdmin = user.role_name === 'Admin';
     const isCSP = user.role_name === 'CSP';
     const isManager = user.role_name === 'Manager';
     
-    // Authorization check
-    if (!isAdmin && !isCSP && !(isManager && resource.manager_id === user.id) && user.id !== resource_id) {
+    // Authorization check — Admin, CSP, SLTs (view_performance), Manager of this resource, or the resource themselves
+    if (!canViewAllPerformance(user) && !(isManager && resource.manager_id === user.id) && user.id !== resource_id) {
       return res.status(403).json({ error: 'Access denied' });
     }
     

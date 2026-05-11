@@ -2,6 +2,11 @@ require('dotenv').config();
 const connectDB = require('./mongodb');
 const models = require('./models');
 
+// Escapes special regex characters in user-supplied strings so they are
+// treated as literals when passed to new RegExp(). Prevents a project name
+// like "Client (Alpha)" or "[Q1]" from throwing a regex syntax error.
+const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 class DatabaseAdapter {
   constructor() {
     this.mongoConnection = null;
@@ -19,7 +24,7 @@ class DatabaseAdapter {
     if (filters.priority && filters.priority !== 'All') query.priority = filters.priority;
     if (filters.stage && filters.stage !== 'All') query.stage = filters.stage;
     if (filters.status && filters.status !== 'All') query.status = filters.status;
-    if (filters.client && filters.client !== 'All') query.clients = new RegExp(filters.client, 'i');
+    if (filters.client && filters.client !== 'All') query.clients = new RegExp(escapeRegex(filters.client), 'i');
     
     const projects = await models.Project.find(query).lean();
     return projects.map(p => ({ ...p, id: p._id.toString() }));
@@ -34,7 +39,7 @@ class DatabaseAdapter {
     // Check for duplicate project name (case-insensitive)
     if (data.name) {
       const existingProject = await models.Project.findOne({ 
-        name: { $regex: new RegExp(`^${data.name}$`, 'i') } 
+        name: { $regex: new RegExp(`^${escapeRegex(data.name)}$`, 'i') } 
       });
       if (existingProject) {
         throw new Error(`A project with the name "${data.name}" already exists`);
@@ -54,7 +59,7 @@ class DatabaseAdapter {
     if (data.name) {
       const existingProject = await models.Project.findOne({ 
         _id: { $ne: id },
-        name: { $regex: new RegExp(`^${data.name}$`, 'i') } 
+        name: { $regex: new RegExp(`^${escapeRegex(data.name)}$`, 'i') } 
       });
       if (existingProject) {
         throw new Error(`A project with the name "${data.name}" already exists`);
@@ -332,7 +337,7 @@ class DatabaseAdapter {
     // Check for duplicate product name for the same client (case-insensitive)
     if (data.name && data.client_id) {
       const existingProduct = await models.Product.findOne({ 
-        name: { $regex: new RegExp(`^${data.name}$`, 'i') },
+        name: { $regex: new RegExp(`^${escapeRegex(data.name)}$`, 'i') },
         client_id: data.client_id
       });
       if (existingProduct) {

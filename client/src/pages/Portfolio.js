@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { Filter, Plus, Download, X, ChevronDown, ChevronLeft, ChevronRight, FolderKanban, CheckCircle2, AlertCircle, MoreHorizontal, FileText, Search, Settings, Briefcase, BarChart3, TrendingUp, CheckCircle } from 'lucide-react';
 import PortfolioMetrics from '../components/PortfolioMetrics';
@@ -60,12 +61,9 @@ function PortfolioContent() {
   useEffect(() => {
     const fetchClients = async () => {
       try {
-        const response = await fetch('/api/clients');
-        if (response.ok) {
-          const data = await response.json();
-          const clientNames = data.map(c => c.name).sort();
-          setAllClients(['All', ...clientNames]);
-        }
+        const response = await axios.get('/api/clients');
+        const clientNames = response.data.map(c => c.name).sort();
+        setAllClients(['All', ...clientNames]);
       } catch (err) {
         console.error('Error fetching clients:', err);
       }
@@ -129,8 +127,9 @@ function PortfolioContent() {
   const staleProjectsList = useMemo(() => ([...freshnessLists.stale, ...freshnessLists.missing]), [freshnessLists]);
 
   // Filter projects by search query (client or project name)
+  // Starts from activeProjectsFiltered so completed/cancelled are excluded — same as metric cards
   const filteredProjects = useMemo(() => {
-    const projects = clientFilteredProjects;
+    const projects = activeProjectsFiltered;
     if (!projectSearchQuery.trim()) return projects;
     
     const query = projectSearchQuery.toLowerCase().trim();
@@ -139,7 +138,7 @@ function PortfolioContent() {
       const clientMatch = (project.clients || '').toLowerCase().includes(query);
       return nameMatch || clientMatch;
     });
-  }, [clientFilteredProjects, projectSearchQuery]);
+  }, [activeProjectsFiltered, projectSearchQuery]);
 
   // Calculate percentage of ACTIVE projects updated within last 7 days
   const totalActiveProjects = activeProjectsFiltered.length;
@@ -552,7 +551,7 @@ function PortfolioContent() {
         </div>
 
       <RAGBoardWithSearch
-        ragBuckets={ragBuckets}
+        ragBuckets={filteredRagBuckets}
         ragSearchQuery={projectSearchQuery}
         setRagCategoryModal={setRagCategoryModal}
         onProjectSelect={setSelectedProjectForModal}

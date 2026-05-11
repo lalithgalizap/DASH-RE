@@ -194,7 +194,7 @@ function Dashboard() {
           }}
           onSave={handleSaveProject}
           canManageClients={hasPermission('clients', 'manage')}
-          canAddClients={hasPermission('clients', 'manage')}
+          canAddClients={canAddClients()}
         />
       )}
 

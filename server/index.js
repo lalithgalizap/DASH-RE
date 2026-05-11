@@ -26,10 +26,15 @@ const exportScheduleRoutes = require('./routes/exportSchedule');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Trust one proxy hop (Nginx reverse proxy on EC2).
+// This lets express-rate-limit read the real client IP from X-Forwarded-For
+// instead of seeing the Nginx loopback address (127.0.0.1) for every request.
+app.set('trust proxy', 1);
+
 // Initialize database adapter
-dbAdapter.initialize().then(() => {
-  // Initialize metric snapshot job after DB is ready
-  initializeMetricSnapshotJob();
+dbAdapter.initialize().then(async () => {
+  // Initialize metric snapshot job after DB is ready (reads schedule from DB)
+  await initializeMetricSnapshotJob();
   // Initialize portfolio export job
   initializePortfolioExportJob();
 }).catch(err => {
