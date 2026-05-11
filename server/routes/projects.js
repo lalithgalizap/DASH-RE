@@ -156,8 +156,14 @@ router.post('/', authenticate, requirePermission('projects', 'add_delete'), asyn
   }
 });
 
-// PUT update project
-router.put('/:id', authenticate, requirePermission('projects', 'edit'), async (req, res) => {
+// PUT update project — requires edit_projects OR edit_portfolio_health
+router.put('/:id', authenticate, async (req, res, next) => {
+  const permissions = await require('../dbAdapter').getUserPermissions(req.user.id);
+  if (!permissions.includes('edit_projects') && !permissions.includes('edit_portfolio_health')) {
+    return res.status(403).json({ error: 'Access denied. Insufficient permissions.' });
+  }
+  next();
+}, async (req, res) => {
   try {
     const { name, priority, stage, summary, status, clients, links, owner, vertical, region, sponsor, anchor_customer, spoc, actionItem, riskSummary, mitigationPlan, sowStatus, dashboardUpdatedAt } = req.body;
 
@@ -241,8 +247,14 @@ router.delete('/:id', authenticate, requirePermission('projects', 'add_delete'),
   }
 });
 
-// Upload project document
-router.post('/upload-document', authenticate, requirePermission('projects', 'add_delete'), projectDocUpload.single('file'), async (req, res) => {
+// Upload project document — requires add_delete_projects OR manage_import
+router.post('/upload-document', authenticate, async (req, res, next) => {
+  const permissions = await require('../dbAdapter').getUserPermissions(req.user.id);
+  if (!permissions.includes('add_delete_projects') && !permissions.includes('manage_import')) {
+    return res.status(403).json({ error: 'Access denied. Insufficient permissions.' });
+  }
+  next();
+}, projectDocUpload.single('file'), async (req, res) => {
   try {
     const { projectId, projectName } = req.body;
     

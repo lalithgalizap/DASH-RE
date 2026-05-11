@@ -106,9 +106,9 @@ function ProjectDetail() {
             </button>
             
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-              {(hasPermission('projects', 'add_delete') || hasPermission('projects', 'edit')) && (
+              {(hasPermission('projects', 'add_delete') || hasPermission('projects', 'edit') || hasPermission('import', 'manage')) && (
                 <>
-                  {hasPermission('projects', 'add_delete') && (
+                  {(hasPermission('projects', 'add_delete') || hasPermission('import', 'manage')) && (
                     <button className="header-action-btn upload-btn" onClick={() => setShowUploadModal(true)}>
                       <Upload size={16} />
                       Upload Document
