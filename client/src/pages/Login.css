@@ -12,19 +12,39 @@
   position: relative;
   overflow: hidden;
   background: #ffffff;
+  align-items: center;
+  justify-content: center;
 }
 
 @media (min-width: 900px) {
   .login-image-panel {
-    display: block;
+    display: flex;
   }
 }
 
-.login-image-panel img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: center;
+.login-panel-text {
+  padding: 48px;
+  line-height: 1.1;
+}
+
+.login-panel-text p {
+  margin: 0 0 6px 0;
+  font-size: clamp(52px, 6.5vw, 82px);
+  font-weight: 800;
+  color: #1e293b;
+  letter-spacing: -2px;
+}
+
+.highlight-orange {
+  color: #f97316;
+}
+
+.highlight-blue {
+  color: #2563eb;
+}
+
+.highlight-dark {
+  color: #1e293b;
 }
 
 .login-image-overlay {

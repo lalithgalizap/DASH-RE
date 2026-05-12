@@ -171,9 +171,13 @@ const Login = () => {
   return (
     <div className="login-page">
 
-      {/* ── Left panel — image ── */}
+      {/* ── Left panel — text ── */}
       <div className="login-image-panel">
-        <img src="/LOGINPAGE.png" alt="PMO Dashboard" />
+        <div className="login-panel-text">
+          <p>Lead the</p>
+          <p>Next wave of</p>
+          <p><span className="highlight-orange">Innovation</span> with <span className="highlight-blue">zap</span><span className="highlight-dark">com</span><span className="highlight-orange">.</span></p>
+        </div>
       </div>
 
       {/* ── Right panel — form ── */}

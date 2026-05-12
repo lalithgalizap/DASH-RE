@@ -63,11 +63,17 @@ function Performance() {
   const CURRENT_YEAR_STR = String(new Date().getFullYear());
 
   const [allResources, setAllResources] = useState([]);
-  const [resourceFilters, setResourceFilters] = useState({
+
+  // Restore filters from sessionStorage so they persist across navigation
+  const savedFilters = (() => {
+    try { return JSON.parse(sessionStorage.getItem('perfResourceFilters')); } catch { return null; }
+  })();
+
+  const [resourceFilters, setResourceFilters] = useState(savedFilters || {
     client: [],
     status: [],
-    quarter: [CURRENT_QUARTER],   // default to current quarter
-    year:    [CURRENT_YEAR_STR],  // default to current year
+    quarter: [CURRENT_QUARTER],
+    year:    [CURRENT_YEAR_STR],
     search: ''
   });
 
@@ -265,10 +271,22 @@ function Performance() {
 
   const handleBack = () => {
     if (view === 'reports') {
-      setView('resources');
-      setSelectedResource(null);
-      setReports([]);
-      updateUrlParams('resources', selectedClient?.id);
+      // If resources were loaded for this client, go back to resources view
+      // Otherwise (came via All Resources shortcut), go straight to clients
+      if (resources.length > 0 && selectedClient) {
+        setView('resources');
+        setSelectedResource(null);
+        setReports([]);
+        updateUrlParams('resources', selectedClient?.id);
+      } else {
+        setView('clients');
+        setSelectedClient(null);
+        setSelectedClientFilter('');
+        setSelectedResource(null);
+        setReports([]);
+        setResources([]);
+        updateUrlParams('clients');
+      }
     } else if (view === 'resources') {
       setView('clients');
       setSelectedClient(null);
@@ -477,8 +495,15 @@ function Performance() {
   };
 
   const clearAllFilters = () => {
-    setResourceFilters({ client: [], status: [], quarter: [CURRENT_QUARTER], year: [CURRENT_YEAR_STR], search: '' });
+    const defaults = { client: [], status: [], quarter: [CURRENT_QUARTER], year: [CURRENT_YEAR_STR], search: '' };
+    setResourceFilters(defaults);
+    sessionStorage.removeItem('perfResourceFilters');
   };
+
+  // Persist filters to sessionStorage whenever they change
+  useEffect(() => {
+    sessionStorage.setItem('perfResourceFilters', JSON.stringify(resourceFilters));
+  }, [resourceFilters]);
 
   if (loading && view === 'clients') {
     return (
