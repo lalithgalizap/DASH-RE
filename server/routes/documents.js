@@ -215,7 +215,29 @@ router.get('/projects/:id/documents', authenticate, async (req, res) => {
     if (workbook.SheetNames.includes('Milestone Tracker')) {
       const worksheet = workbook.Sheets['Milestone Tracker'];
       const allRows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
-      documents.milestoneTracker = allRows.filter(row => row['Milestone Ref'] && String(row['Milestone Ref']).trim() !== '');
+
+      // Normalise column headers — map common WBS variants to 'WBS'
+      // and common Milestone Ref variants to 'Milestone Ref'
+      const WBS_VARIANTS = ['wbs', 'wbs code', 'wbs id', 'wbs number', 'wbs no', 'wbs ref'];
+      const MILESTONE_REF_VARIANTS = ['milestone ref', 'milestone reference', 'milestone id', 'milestone no', 'ref'];
+
+      const normalised = allRows.map(row => {
+        const normRow = { ...row };
+        for (const key of Object.keys(row)) {
+          const lower = key.trim().toLowerCase();
+          if (lower !== 'wbs' && WBS_VARIANTS.includes(lower)) {
+            normRow['WBS'] = row[key];
+            delete normRow[key];
+          }
+          if (lower !== 'milestone ref' && MILESTONE_REF_VARIANTS.includes(lower) && !normRow['Milestone Ref']) {
+            normRow['Milestone Ref'] = row[key];
+            delete normRow[key];
+          }
+        }
+        return normRow;
+      });
+
+      documents.milestoneTracker = normalised.filter(row => row['Milestone Ref'] && String(row['Milestone Ref']).trim() !== '');
     }
     
     if (workbook.SheetNames.includes('Stakeholder Register')) {

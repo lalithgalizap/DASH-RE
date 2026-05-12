@@ -31,10 +31,15 @@ function MilestonesTab({
   const finalDisplayColumns = displayColumns.length > 0 ? displayColumns : allColumns.slice(0, 8);
 
   const getUniqueValues = (field) => {
-    const values = [...new Set(documents.milestoneTracker.map(milestone => milestone[field]).filter(val => {
-      return val && val !== field && String(val).trim() !== '';
-    }))];
-    return values.sort();
+    const values = [...new Set(
+      documents.milestoneTracker
+        .map(milestone => String(milestone[field] ?? '').trim())
+        .filter(val => val !== '' && val !== field)
+    )];
+    return values.sort((a, b) => {
+      // Natural sort so "1", "1.1", "2", "10" sort correctly
+      return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+    });
   };
 
   const filterOptions = {
@@ -46,7 +51,16 @@ function MilestonesTab({
   const filteredMilestones = documents.milestoneTracker.filter(milestone => {
     return Object.entries(milestoneFilters).every(([field, value]) => {
       if (!value) return true;
-      return milestone[field] === value;
+      const cellValue = String(milestone[field] ?? '').trim();
+      const filterValue = String(value).trim();
+      // WBS: prefix match so filtering "1" also shows "1.1", "1.2", "1.3" etc.
+      if (field === 'WBS') {
+        return cellValue === filterValue ||
+               cellValue.startsWith(filterValue + '.') ||
+               cellValue.startsWith(filterValue + ' ');
+      }
+      // All other fields: case-insensitive exact match (handles number/string coercion)
+      return cellValue.toLowerCase() === filterValue.toLowerCase();
     });
   });
 
