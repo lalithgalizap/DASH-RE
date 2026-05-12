@@ -12,23 +12,32 @@ const router = express.Router();
 // Multer config for temp PDF uploads
 const upload = multer({ dest: 'tmp/' });
 
-// Helper: CSP or Admin only
-const requireCSPOrAdmin = (req, res, next) => {
+// Helper: CSP or Admin (hardcoded) OR any user with manage_performance permission
+const requireCSPOrAdmin = async (req, res, next) => {
   const role = req.user?.role_name;
+  // Fast path — hardcoded role names
   if (role === 'CSP' || role === 'Admin') {
     return next();
   }
-  return res.status(403).json({ error: 'CSP or Admin access required' });
+  // Permission-based path — fetch from DB
+  try {
+    const { getUserPermissions } = require('../auth');
+    const permissions = await getUserPermissions(req.user.id);
+    if (permissions.includes('manage_performance')) {
+      return next();
+    }
+  } catch (err) {
+    console.error('requireCSPOrAdmin permission check error:', err);
+  }
+  return res.status(403).json({ error: 'CSP, Admin, or manage_performance permission required' });
 };
 
 // Helper: returns true if the user can view all performance data globally
-// (Admin, CSP, or any role with view_performance permission)
-// NOTE: user must have permissions array populated via getUserPermissions()
+// Only users with can_view_global_performance permission get global access.
+// Admin, CSP, SLTs get this via migrate-db.js — no hardcoded role names.
+// Manager has view_performance (page access) but NOT can_view_global_performance.
 const canViewAllPerformance = (user) => {
-  return user.role_name === 'Admin' ||
-         user.role_name === 'CSP' ||
-         (user.permissions || []).includes('view_performance') ||
-         (user.permissions || []).includes('can_view_global_performance');
+  return (user.permissions || []).includes('can_view_global_performance');
 };
 
 // Fetch user + permissions in one call — used by all performance endpoints
@@ -102,7 +111,8 @@ router.get('/metrics', authenticate, async (req, res) => {
     // ── RBAC: determine which users are in scope ──────────────────────────────
     let relevantUsers = allUsers.filter(u => u.role_name === 'Manager' || u.role_name === 'Resource');
     if (isManager && !canViewAll) {
-      relevantUsers = relevantUsers.filter(u => u.manager_id === user.id || u.id === user.id);
+      // Manager sees only their assigned Resources — not other managers, not themselves
+      relevantUsers = relevantUsers.filter(u => u.role_name === 'Resource' && u.manager_id === user.id);
     }
 
     // Filter clients

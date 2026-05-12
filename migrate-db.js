@@ -95,7 +95,7 @@ const DESIRED_PERMISSIONS = [
   { permission_name: 'view_global_weekly_updates', description: 'Can view all weekly updates globally' },
   { permission_name: 'view_performance',           description: 'Can view Performance page' },
   { permission_name: 'manage_performance',         description: 'Can upload and manage performance reports' },
-  { permission_name: 'manage_staff_augmentation',  description: 'Can manage staff augmentation resources' },
+  { permission_name: 'can_view_global_performance',description: 'Can view all performance data globally across all clients and resources' },
 ];
 
 // role_name → permission_names[]
@@ -111,7 +111,7 @@ const DESIRED_ROLE_PERMISSIONS = {
     'manage_roles', 'view_roles',
     'manage_closure_docs',
     'view_weekly_updates', 'manage_weekly_updates', 'view_global_weekly_updates',
-    'view_performance', 'manage_performance', 'manage_staff_augmentation',
+    'view_performance', 'manage_performance', 'can_view_global_performance',
   ],
   CSP: [
     // Dashboard + Projects (read) + Portfolio (read + edit) + Performance (read + upload) + Clients (read via auth, no manage)
@@ -121,6 +121,7 @@ const DESIRED_ROLE_PERMISSIONS = {
     'view_performance', 'manage_performance',
     'view_weekly_updates', 'manage_weekly_updates', 'view_global_weekly_updates',
     'add_clients_to_project',
+    'can_view_global_performance',
   ],
   PMO: [
     // Dashboard + Projects (full) + Portfolio + Clients/Products + Import
@@ -143,11 +144,12 @@ const DESIRED_ROLE_PERMISSIONS = {
     'view_portfolio',
   ],
   SLTs: [
-    // Dashboard + Projects (read) + Portfolio (read) + Performance (read) + Clients (read) + Users/Roles (read)
+    // Dashboard + Projects (read) + Portfolio (read) + Performance (global read) + Clients (read) + Users/Roles (read)
     'view_dashboard',
     'view_projects',
     'view_portfolio',
     'view_performance',
+    'can_view_global_performance',
     'view_clients',
     'view_users', 'view_roles',
   ],

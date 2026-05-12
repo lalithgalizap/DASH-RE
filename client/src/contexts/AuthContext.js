@@ -114,7 +114,8 @@ export const AuthProvider = ({ children }) => {
   };
 
   const canViewGlobalPerformance = () => {
-    return hasPermission('performance', 'view_global') || isAdmin() || isCSP();
+    if (!user || !user.permissions) return false;
+    return user.permissions.includes('can_view_global_performance');
   };
 
   // Forgot password methods

@@ -127,7 +127,7 @@ const RoleManagement = () => {
         'view_weekly_updates', 'manage_weekly_updates', 'view_global_weekly_updates'
       ],
       'Performance': [
-        'view_performance', 'manage_performance', 'manage_staff_augmentation'
+        'view_performance', 'manage_performance', 'can_view_global_performance'
       ],
       'User Management': [
         'view_users', 'manage_users'
