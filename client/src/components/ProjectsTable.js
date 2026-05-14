@@ -46,15 +46,17 @@ function ProjectsTable({ projects, allProjects, filters, onFilterChange, onEdit,
   };
 
   const getStatusCounts = () => {
-    const allProjects = projects;
+    // Count from the full unfiltered list so button counts stay correct
+    // regardless of which filter is currently active
+    const projectsToCount = allProjects || projects;
     return {
-      all: allProjects.length,
-      yetToStart: allProjects.filter(p => p.status === 'Yet to Start').length,
-      onTrack: allProjects.filter(p => p.status === 'On Track').length,
-      onHold: allProjects.filter(p => p.status === 'On Hold').length,
-      delayed: allProjects.filter(p => p.status === 'Delayed').length,
-      completed: allProjects.filter(p => p.status === 'Completed').length,
-      cancelled: allProjects.filter(p => p.status === 'Cancelled').length
+      all: projectsToCount.length,
+      yetToStart: projectsToCount.filter(p => p.status === 'Yet to Start').length,
+      onTrack: projectsToCount.filter(p => p.status === 'On Track').length,
+      onHold: projectsToCount.filter(p => p.status === 'On Hold').length,
+      delayed: projectsToCount.filter(p => p.status === 'Delayed').length,
+      completed: projectsToCount.filter(p => p.status === 'Completed').length,
+      cancelled: projectsToCount.filter(p => p.status === 'Cancelled').length
     };
   };
 
