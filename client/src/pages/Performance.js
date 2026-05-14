@@ -135,11 +135,8 @@ function Performance() {
         : '/api/performance/metrics';
       const response = await axios.get(url);
       setMetrics(response.data);
-      const combined = [
-        ...(response.data.resourcesWithoutReport || []),
-        ...(response.data.managersWithoutReport || [])
-      ];
-      setNoReportResources(combined);
+      // noReportResources is now derived from allResources (filteredForMetrics)
+      // to stay consistent with the card count — see clients view render logic
     } catch (error) {
       console.error('Error fetching metrics:', error);
     }
@@ -271,22 +268,14 @@ function Performance() {
 
   const handleBack = () => {
     if (view === 'reports') {
-      // If resources were loaded for this client, go back to resources view
-      // Otherwise (came via All Resources shortcut), go straight to clients
-      if (resources.length > 0 && selectedClient) {
-        setView('resources');
-        setSelectedResource(null);
-        setReports([]);
-        updateUrlParams('resources', selectedClient?.id);
-      } else {
-        setView('clients');
-        setSelectedClient(null);
-        setSelectedClientFilter('');
-        setSelectedResource(null);
-        setReports([]);
-        setResources([]);
-        updateUrlParams('clients');
-      }
+      // Always go straight back to clients — skip the intermediate resources view
+      setView('clients');
+      setSelectedClient(null);
+      setSelectedClientFilter('');
+      setSelectedResource(null);
+      setReports([]);
+      setResources([]);
+      updateUrlParams('clients');
     } else if (view === 'resources') {
       setView('clients');
       setSelectedClient(null);
@@ -571,6 +560,14 @@ function Performance() {
             const withReport = filteredForMetrics.filter(r => r.latest_report).length;
             const withoutReport = totalFiltered - withReport;
 
+            // Keep noReportResources in sync with the card count —
+            // same source, same filters (quarter, product, inactive excluded)
+            const noReportList = filteredForMetrics.filter(r => !r.latest_report);
+            if (noReportList.length !== noReportResources.length ||
+                noReportList.some((r, i) => r.id !== noReportResources[i]?.id)) {
+              setNoReportResources(noReportList);
+            }
+
             // Always show Red / Amber / Green rows
             const distRows = [
               { name: 'Red',   color: '#ef4444', value: filteredForMetrics.filter(r => r.latest_report?.overall_status === 'red').length },
@@ -804,14 +801,13 @@ function Performance() {
                       }}
                       className="filter-select"
                     >
-                      <option value="">All Quarters</option>
                       <option value="Q1">Q1</option>
                       <option value="Q2">Q2</option>
                       <option value="Q3">Q3</option>
                       <option value="Q4">Q4</option>
                     </select>
                     <div className="multi-select-label">
-                      {resourceFilters.quarter.length === 0 ? 'All Quarters' : 
+                      {resourceFilters.quarter.length === 0 ? CURRENT_QUARTER :
                        resourceFilters.quarter[0] === CURRENT_QUARTER
                          ? `${CURRENT_QUARTER} (Current)`
                          : resourceFilters.quarter[0]}
@@ -828,14 +824,13 @@ function Performance() {
                       }}
                       className="filter-select"
                     >
-                      <option value="">All Years</option>
                       <option value="2024">2024</option>
                       <option value="2025">2025</option>
                       <option value="2026">2026</option>
                       <option value="2027">2027</option>
                     </select>
                     <div className="multi-select-label">
-                      {resourceFilters.year.length === 0 ? 'All Years' : 
+                      {resourceFilters.year.length === 0 ? CURRENT_YEAR_STR :
                        resourceFilters.year[0] === CURRENT_YEAR_STR
                          ? `${CURRENT_YEAR_STR} (Current)`
                          : resourceFilters.year[0]}
@@ -1200,7 +1195,6 @@ function Performance() {
                       onChange={e => setReportFilters({ ...reportFilters, quarter: e.target.value })}
                       className="filter-select"
                     >
-                      <option value="">All Quarters</option>
                       <option value="Q1">Q1</option>
                       <option value="Q2">Q2</option>
                       <option value="Q3">Q3</option>
@@ -1213,7 +1207,6 @@ function Performance() {
                       onChange={e => setReportFilters({ ...reportFilters, year: e.target.value })}
                       className="filter-select"
                     >
-                      <option value="">All Years</option>
                       {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
                   </div>

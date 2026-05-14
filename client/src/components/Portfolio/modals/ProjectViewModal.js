@@ -129,7 +129,7 @@ function ProjectViewModal({ project, isOpen, onClose }) {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
               <button
-                onClick={() => { onClose(); navigate(`/project/${projectId}`); }}
+                onClick={() => { window.open(`/project/${projectId}`, '_blank'); }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '5px',
                   padding: '6px 12px', fontSize: '12px', fontWeight: 500,

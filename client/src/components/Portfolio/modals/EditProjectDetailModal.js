@@ -126,13 +126,16 @@ function EditProjectDetailModal({ project, isOpen, onClose, onSave }) {
             {/* Status — single-line input */}
             <div style={{ marginBottom: '16px' }}>
               <label style={labelStyle}>Status</label>
-              <input
-                type="text"
+              <textarea
                 name="sowStatus"
                 value={formData.sowStatus}
                 onChange={handleChange}
-                placeholder="e.g. Active, On Hold, Completed…"
-                style={fieldBase}
+                placeholder="Enter project status…"
+                style={{
+                  ...fieldBase,
+                  resize: 'none',
+                  height: '80px',
+                }}
                 onFocus={e => (e.target.style.borderColor = '#3b82f6')}
                 onBlur={e  => (e.target.style.borderColor = '#e5e7eb')}
               />
